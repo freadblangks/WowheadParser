@@ -5,12 +5,18 @@ using Newtonsoft.Json;
 using Sql;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Xml;
+using WOWSharp.Community;
+using WOWSharp.Community.Diablo;
+using WOWSharp.Community.Wow;
 
 namespace WowHeadParser.Entities
 {
     class Quest : Entity
     {
+
         struct QuestTemplateParsing
         {
             public int id;
@@ -32,16 +38,15 @@ namespace WowHeadParser.Entities
             m_builderEnder = new SqlBuilder("creature_questender", "id");
             m_builderEnder.SetFieldsNames("quest");
 
-            m_builderSerieWithPrevious = new SqlBuilder("quest_template_addon", "id", SqlQueryType.Update);
-            m_builderSerieWithPrevious.SetFieldsNames("PrevQuestID", "ExclusiveGroup");
-
-            m_builderSerieWithoutPrevious = new SqlBuilder("quest_template_addon", "id", SqlQueryType.Update);
-            m_builderSerieWithoutPrevious.SetFieldsNames("ExclusiveGroup");
+            m_builderSerieWithPrevious = new SqlBuilder("quest_template_addon", "id");
+            m_builderSerieWithPrevious.SetFieldsNames("PrevQuestID", "NextQuestID", "ExclusiveGroup", "RequiredMinRepFaction", "RequiredMaxRepFaction", "RequiredMinRepValue", "RequiredMaxRepValue", "ProvidedItemCount");
+            
 
             m_builderRequiredTeam = new SqlBuilder("quest_template", "id", SqlQueryType.Update);
 
             m_builderRequiredClass = new SqlBuilder("quest_template_addon", "id", SqlQueryType.Update);
             m_builderRequiredClass.SetFieldsNames("AllowableClasses");
+
         }
 
         public Quest(int id) : this()
@@ -81,7 +86,7 @@ namespace WowHeadParser.Entities
                 m_data.id = id;
 
             bool optionSelected = false;
-            String questHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl());
+            String questHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             if (questHtml.Contains("inputbox-error") || questHtml.Contains("database-detail-page-not-found-message"))
                 return false;
@@ -106,7 +111,7 @@ namespace WowHeadParser.Entities
                 String questSerieXml = Tools.ExtractJsonFromWithPattern(questHtml, seriePattern);
                 if (questSerieXml != null)
                 {
-                    SetSerie(questSerieXml);
+                    SetSerie(questSerieXml).Wait();
                     optionSelected = true;
                 }
             }
@@ -188,8 +193,8 @@ namespace WowHeadParser.Entities
                 }
             }
         }
-
-        public void SetSerie(String serieXml)
+        static List<string> parsedQuests = new List<string>();
+        public async Task SetSerie(String serieXml)
         {
             try
             {
@@ -237,15 +242,17 @@ namespace WowHeadParser.Entities
                     }
                 }
 
-                if (questInSerieByStep.Count < 2)
-                    return;
-
+                
                 for (int i = questInSerieByStep.Count - 1; i >= 0; --i)
                 {
-                    String previousQuest = "";
+                    String previousQuest = "0";
+                    String nextQuest = "0";
 
                     if (questInSerieByStep.TryGetValue(i - 1, out var listStr) && listStr != null && listStr.Count != 0)
                         previousQuest = i > 0 ? listStr[0]: "";
+
+                    if (questInSerieByStep.TryGetValue(i + 1, out listStr) && listStr != null && listStr.Count != 0)
+                        nextQuest = i + 1 > 0 ? listStr[0] : "";
 
                     String exclusiveGroup = "0";
                     if (questInSerieByStep[i].Count > 1)
@@ -253,10 +260,41 @@ namespace WowHeadParser.Entities
 
                     foreach (String questId in questInSerieByStep[i])
                     {
-                        if (previousQuest != "")
-                            m_builderSerieWithPrevious.AppendFieldsValue(questId, previousQuest, exclusiveGroup);
-                        else
-                            m_builderSerieWithoutPrevious.AppendFieldsValue(questId, exclusiveGroup);
+                        if (parsedQuests.Contains(questId))
+                            continue;
+                        
+                        var questInfo = WowClient.GetQuestAsync(int.Parse(questId));
+                        questInfo.Wait();
+                        var qi = questInfo.Result;
+
+                        long RequiredMinRepFaction = 0;
+                        long RequiredMaxRepFaction = 0;
+                        long RequiredMinRepValue = 0;
+                        long RequiredMaxRepValue = 0;
+                        long ProvidedItemCount = 0;
+                       
+                        if (qi != null)
+                        {
+                            if (qi.Requirements != null && qi.Requirements.Reputations != null && qi.Requirements.Reputations.Length != 0)
+                            {
+                                var facton = qi.Requirements.Reputations[0];
+
+                                long minId = qi.Requirements.Reputations.Min(r => r.Faction.Id);
+                                long maxId = qi.Requirements.Reputations.Max(r => r.Faction.Id);
+
+                                RequiredMinRepFaction = minId;
+                                RequiredMaxRepFaction = maxId;
+                                RequiredMinRepValue = facton.MinReputation.HasValue ? facton.MinReputation.Value : 0;
+                                RequiredMaxRepValue = facton.MaxReputation.HasValue ? facton.MaxReputation.Value : 0;
+                            }
+
+                            if (qi.Rewards != null && qi.Rewards.Items != null &&
+                                ((qi.Rewards.Items.ChoiceOf != null && qi.Rewards.Items.ChoiceOf.Length != 0) || (qi.Rewards.Items.ItemsItems != null && qi.Rewards.Items.ItemsItems.Length != 0)))
+                                ProvidedItemCount = 1;
+                        }
+
+                        parsedQuests.Add(questId);
+                        m_builderSerieWithPrevious.AppendFieldsValue(questId, previousQuest, nextQuest, exclusiveGroup, RequiredMinRepFaction, RequiredMaxRepFaction, RequiredMinRepValue, RequiredMaxRepValue, ProvidedItemCount);
                     }
                 }
             }
@@ -311,7 +349,6 @@ namespace WowHeadParser.Entities
             if (IsCheckboxChecked("serie"))
             {
                 sqlRequest += m_builderSerieWithPrevious.ToString();
-                sqlRequest += m_builderSerieWithoutPrevious.ToString();
             }
 
             if (IsCheckboxChecked("team"))
@@ -332,7 +369,6 @@ namespace WowHeadParser.Entities
         protected SqlBuilder m_builderStarter;
         protected SqlBuilder m_builderEnder;
         protected SqlBuilder m_builderSerieWithPrevious;
-        protected SqlBuilder m_builderSerieWithoutPrevious;
         protected SqlBuilder m_builderRequiredTeam;
         protected SqlBuilder m_builderRequiredClass;
     }

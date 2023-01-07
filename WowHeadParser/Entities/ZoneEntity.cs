@@ -45,7 +45,7 @@ namespace WowHeadParser.Entities
             else if (m_data.id == 0 && id != 0)
                 m_data.id = id;
 
-            String zoneHTML = Tools.GetHtmlFromWowhead(GetWowheadUrl());
+            String zoneHTML = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             String fishingPattern = @"new Listview\(\{template: 'item', id: 'fishing', name: LANG\.tab_fishing, tabs: tabsRelated, parent: 'lkljbjkb574', extraCols: \[Listview\.extraCols\.count, Listview\.extraCols.percent\], sort:\['-percent', 'name'\], computeDataFunc: Listview\.funcBox\.initLootTable, note: \$WH\.sprintf\(LANG\.lvnote_zonefishing, [0-9]+\), _totalCount: ([0-9]+), data: (.+)\}\);";
 

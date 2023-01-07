@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using WOWSharp.Community;
 
 namespace WowHeadParser
 {
@@ -171,28 +172,74 @@ namespace WowHeadParser
             Console.WriteLine("X509Certificate [{0}] Policy Error: '{1}'",
                 cert.Subject,
                 error.ToString());
-
+            
             return false;
         }
 
-        public static String GetHtmlFromWowhead(String url, HttpClient webClient = null)
+        public static String GetHtmlFromWowhead(String url, HttpClient webClient, ICacheManager cacheManager)
         {
             if (webClient == null)
                 webClient = InitHttpClient();
 
-            try
+            if (cacheManager == null)
+                cacheManager = new FileCacheManager();
+
+            int retry = 0;
+
+
+            while (retry < 3)
             {
-                using (HttpResponseMessage response = webClient.GetAsync(url).Result)
+                try
                 {
-                    using (HttpContent content = response.Content)
+
+                    var lookup = cacheManager.LookupDataAsync(url, typeof(string));
+                    lookup.Wait();
+                    var data = lookup.Result;
+
+                    if (data != null)
+                        return data.ToString();
+
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.Write(ex);
+                }
+
+                retry++;
+            }
+
+            retry = 0;
+            while (retry < 3)
+            {
+                try
+                {
+                    using (HttpResponseMessage response = webClient.GetAsync(url).Result)
                     {
-                        return content.ReadAsStringAsync().Result;
+                        using (HttpContent content = response.Content)
+                        {
+                            var result = content.ReadAsStringAsync();
+                            result.Wait();
+
+                            try
+                            {
+                                cacheManager.AddDataAsync(url, result.Result).Wait();
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Write(ex);
+                            }
+
+                            return result.Result;
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.Write(ex);
+                catch (Exception ex)
+                {
+                    Console.Write(ex);
+                }
+
+                retry++;
             }
 
             return "";

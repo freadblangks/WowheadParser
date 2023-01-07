@@ -70,7 +70,7 @@ namespace WowHeadParser.Entities
                 m_data.id = id;
 
             bool optionSelected = false;
-            String itemHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl());
+            String itemHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             String dataPattern = @"\$\.extend\(g_items\[" + m_data.id + @"\], (.+)\);";
 

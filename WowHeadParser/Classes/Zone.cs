@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using WowHeadParser.Entities;
+using WOWSharp.Community;
 
 namespace WowHeadParser
 {
@@ -91,7 +93,7 @@ namespace WowHeadParser
 
         public String GetZoneHtmlFromWowhead(String zone)
         {
-            return Tools.GetHtmlFromWowhead(Tools.GetWowheadUrl("zone", zone));
+            return Tools.GetHtmlFromWowhead(Tools.GetWowheadUrl("zone", zone), new System.Net.Http.HttpClient(), new FileCacheManager());
         }
 
         public void ParseZoneJson()

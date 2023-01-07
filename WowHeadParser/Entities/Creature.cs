@@ -157,7 +157,7 @@ namespace WowHeadParser.Entities
                 webClient = new System.Net.Http.HttpClient();
 
             bool optionSelected = false;
-            String creatureHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient);
+            String creatureHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             if (creatureHtml.Contains("inputbox-error") || creatureHtml.Contains("database-detail-page-not-found-message"))
                 return false;
@@ -687,7 +687,7 @@ namespace WowHeadParser.Entities
             if (IsCheckboxChecked("trainer") && m_creatureTrainerDatas != null)
             {
                 m_creatureTrainerBuilder = new SqlBuilder("npc_trainer", "entry", SqlQueryType.DeleteInsert);
-                m_creatureTrainerBuilder.SetFieldsNames("spell", "spellcost", "reqskill", "reqskillvalue", "reqlevel");
+                m_creatureTrainerBuilder.SetFieldsNames("SpellID", "MoneyCost", "ReqSkillLine", "ReqSkillRank", "ReqLevel");
 
                 returnSql += "UPDATE creature_template SET npc_flag = 16 WHERE entry = " + m_creatureTemplateData.id + ";\n";
                 foreach (CreatureTrainerParsing creatureTrainerData in m_creatureTrainerDatas)

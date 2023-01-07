@@ -86,7 +86,7 @@ namespace WowHeadParser.Entities
                 m_data.id = id;
 
             bool optionSelected = false;
-            String gameobjectHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl());
+            String gameobjectHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             String gameobjectDataPattern = @"\$\.extend\(g_objects\[" + m_data.id + @"\], (.+)\);";
 

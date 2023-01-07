@@ -8,6 +8,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using WOWSharp.Community;
+using WOWSharp.Community.Wow;
 
 namespace WowHeadParser.Entities
 {
@@ -60,5 +62,9 @@ namespace WowHeadParser.Entities
         static private String m_baseWowheadUrl = "";
 
         public HttpClient webClient;
+
+        public WowClient WowClient;
+
+        public ICacheManager CacheManager;
     }
 }

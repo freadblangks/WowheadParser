@@ -6,13 +6,15 @@ using System.ComponentModel;
 using System.IO;
 using System.Net.Http;
 using WowHeadParser.Entities;
+using WOWSharp.Community;
+using WOWSharp.Community.Wow;
 
 namespace WowHeadParser
 {
     class Range
     {
         static readonly object locker = new object();
-        const int MAX_WORKER = 50;
+        const int MAX_WORKER = 20;
 
         public Range(MainWindow view, String fileName, String optionName)
         {
@@ -21,7 +23,8 @@ namespace WowHeadParser
             m_parsedEntitiesCount = 0;
             m_getRangeListBackgroundWorker = new BackgroundWorker[MAX_WORKER];
             m_webClients = new HttpClient[MAX_WORKER];
-
+            m_client = new WowClient[MAX_WORKER];
+            m_cacheManagers = new ICacheManager[MAX_WORKER];    
             m_fileName = fileName;
             m_optionName = optionName;
             m_lastEstimateTime = 0;
@@ -56,7 +59,8 @@ namespace WowHeadParser
             for (int i = 0; i < maxWorkers; ++i)
             {
                 m_webClients[i] = Tools.InitHttpClient();
-
+                m_client[i] = new WowClient();
+                m_cacheManagers[i] = new FileCacheManager(); 
                 m_getRangeListBackgroundWorker[i] = new BackgroundWorker();
                 m_getRangeListBackgroundWorker[i].DoWork += new DoWorkEventHandler(BackgroundWorkerProcessEntitiesList);
                 m_getRangeListBackgroundWorker[i].RunWorkerCompleted += new RunWorkerCompletedEventHandler(BackgroundWorkerProcessEntitiesCompleted);
@@ -75,6 +79,7 @@ namespace WowHeadParser
                 e.Result = e.Argument;
                 Entity entity = m_view.CreateNeededEntity(m_from + tempIndex);
                 entity.webClient = m_webClients[(int)e.Result];
+                entity.WowClient = m_client[(int)e.Result];
                 // If entity is false, don't even continue here
                 if (entity.ParseSingleJson())
                 {
@@ -166,6 +171,8 @@ namespace WowHeadParser
 
         private BackgroundWorker[] m_getRangeListBackgroundWorker;
         private HttpClient[] m_webClients;
+        private WowClient[] m_client;
+        private ICacheManager[] m_cacheManagers;
 
         // Test
         private int m_timestamp;
