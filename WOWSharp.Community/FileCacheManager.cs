@@ -14,6 +14,12 @@ namespace WOWSharp.Community
     public class FileCacheManager : ICacheManager
     {
         
+#if DEBUG
+        public static string CacheDirectory = "C:\\WoWTools\\Wowheadparser\\cache\\";
+#else
+        public static string CacheDirectory = ".\\cache\\";
+#endif
+        
         public async Task AddDataAsync(string key, object value)
         {
             await Task.Run(() =>
@@ -67,10 +73,10 @@ namespace WOWSharp.Community
             if (urlDest != -1)
                 key = key.Substring(urlDest + 1);
 
-            if (!Directory.Exists(".\\cache\\"))
-                Directory.CreateDirectory(".\\cache\\");
+            if (!Directory.Exists(CacheDirectory))
+                Directory.CreateDirectory(CacheDirectory);
 
-            return Path.Combine(".\\cache\\", MakeFileNameSafe(key));
+            return Path.Combine(CacheDirectory, MakeFileNameSafe(key));
         }
 
         private string MakeFileNameSafe(string fileName)

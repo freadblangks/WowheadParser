@@ -140,6 +140,9 @@ namespace WowHeadParser.Entities
                 }
             }
 
+            String itemTeachesPattern = @"new Listview\(\{\n* *template: 'npc',\n* *id: 'dropped-by',\n* *name: WH.TERMS.droppedby,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *hiddenCols: \['type'\],\n* *extraCols: \[Listview.extraCols.count, Listview.extraCols.percent, Listview.extraCols.popularity\],\n* *sort: \['-percent', '-count', 'name'\],\n* *computeDataFunc: Listview.funcBox.initLootTable,\n* *data: (.+),\n\}\);";
+
+
             if (optionSelected)
                 return true;
             else
@@ -226,8 +229,8 @@ namespace WowHeadParser.Entities
 
                 foreach (ItemLootTemplateParsing itemLootData in m_itemLootTemplateDatas)
                 {
-                    String percent = ((float)itemLootData.count / (float)m_lootMaxCount * 100).ToString().Replace(",", ".");
-
+                    String percent = Tools.NormalizeFloat((float)itemLootData.count / (float)m_lootMaxCount * 100);
+                    
                     int minLootCount = itemLootData.stack.Length >= 1 ? itemLootData.stack[0] : 1;
                     int maxLootCount = itemLootData.stack.Length >= 2 ? itemLootData.stack[1] : minLootCount;
 

@@ -4,6 +4,8 @@
 using Newtonsoft.Json;
 using Sql;
 using System;
+using System.Linq;
+using WowHeadParser.Models;
 
 namespace WowHeadParser.Entities
 {
@@ -19,18 +21,17 @@ namespace WowHeadParser.Entities
         {
             public int id;
             public int count;
+            public string name;
         }
 
         public ZoneEntity()
         {
             m_data.id = 0;
-            m_itemMaxCount = 0;
         }
 
         public ZoneEntity(int id)
         {
             m_data.id = id;
-            m_itemMaxCount = 0;
         }
 
         public override String GetWowheadUrl()
@@ -47,13 +48,16 @@ namespace WowHeadParser.Entities
 
             String zoneHTML = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
-            String fishingPattern = @"new Listview\(\{template: 'item', id: 'fishing', name: LANG\.tab_fishing, tabs: tabsRelated, parent: 'lkljbjkb574', extraCols: \[Listview\.extraCols\.count, Listview\.extraCols.percent\], sort:\['-percent', 'name'\], computeDataFunc: Listview\.funcBox\.initLootTable, note: \$WH\.sprintf\(LANG\.lvnote_zonefishing, [0-9]+\), _totalCount: ([0-9]+), data: (.+)\}\);";
+            if (string.IsNullOrEmpty(zoneHTML) || zoneHTML.Contains("It may have been removed from the game."))
+                return false;
 
-            m_itemMaxCount = Int32.Parse(Tools.ExtractJsonFromWithPattern(zoneHTML, fishingPattern, 0));
-            String fishingJSon = Tools.ExtractJsonFromWithPattern(zoneHTML, fishingPattern, 1);
+
+            String fishingPattern = @"new Listview\({\n *template: 'item',\n *id: '[^']*',\n *name: [^,]*,\n *tabs: [^,]*,\n *parent: '[^']*',\n *extraCols: \[[^\]]*\],\n *sort:\[[^\]]*\],\n *computeDataFunc: [^,]*,\n *note: ""[^""]*"",\n *_totalCount: [0-9]*,\n *data:(.*)\}\);";
+            
+            String fishingJSon = Tools.ExtractJsonFromWithPattern(zoneHTML, fishingPattern);
             if (fishingJSon != null)
             {
-                m_fishingDatas = JsonConvert.DeserializeObject<FishingParsing[]>(fishingJSon);
+                m_fishingDatas = JsonConvert.DeserializeObject<ZoneFishingLoot[]>(fishingJSon);
             }
 
             return true;
@@ -69,12 +73,17 @@ namespace WowHeadParser.Entities
             if (IsCheckboxChecked("Fishing") && m_fishingDatas != null)
             {
                 m_FishingLootTemplateBuilder = new SqlBuilder("fishing_loot_template", "entry", SqlQueryType.InsertIgnore);
-                m_FishingLootTemplateBuilder.SetFieldsNames("item", "ChanceOrQuestChance", "lootmode", "groupid", "mincountOrRef", "maxcount", "itemBonuses");
+                m_FishingLootTemplateBuilder.SetFieldsNames("item", "Chance", "lootmode", "groupid", "MinCount", "MaxCount", "Comment");
+                var totalCount = m_fishingDatas.Sum(f => f.count);
 
-                foreach (FishingParsing fishingLootdata in m_fishingDatas)
+                foreach (ZoneFishingLoot fishingLootdata in m_fishingDatas)
                 {
-                    String percent = ((float)fishingLootdata.count / (float)m_itemMaxCount * 100).ToString().Replace(",", ".");
-                    m_FishingLootTemplateBuilder.AppendFieldsValue(m_data.id, fishingLootdata.id, percent, 1, 0, "1", "1", "");
+                    String percent = Tools.NormalizeFloat(((float)fishingLootdata.count / (float)totalCount * 100));
+
+                    if (fishingLootdata.stack != null && fishingLootdata.stack.Length > 1)
+                        m_FishingLootTemplateBuilder.AppendFieldsValue(m_data.id, fishingLootdata.id, percent, 1, 0, fishingLootdata.stack[0], fishingLootdata.stack[1], fishingLootdata.name.Replace("'", "\\'"));
+                    else
+                        m_FishingLootTemplateBuilder.AppendFieldsValue(m_data.id, fishingLootdata.id, percent, 1, 0, 1, 1, fishingLootdata.name.Replace("'", "\\'"));
                 }
 
                 returnSql += m_FishingLootTemplateBuilder.ToString() + "\n";
@@ -85,8 +94,7 @@ namespace WowHeadParser.Entities
 
         public ZoneParsing m_data;
 
-        protected FishingParsing[] m_fishingDatas;
-        protected int m_itemMaxCount;
+        protected ZoneFishingLoot[] m_fishingDatas;
 
         protected SqlBuilder m_spellLootTemplateBuilder;
         protected SqlBuilder m_FishingLootTemplateBuilder;

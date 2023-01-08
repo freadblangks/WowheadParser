@@ -127,6 +127,7 @@
     <Compile Include="Models\ItemPickpocketedFrom.cs" />
     <Compile Include="Models\ItemSkinnedFrom.cs" />
     <Compile Include="Models\ItemSoldBy.cs" />
+    <Compile Include="Models\ItemTeaches.cs" />
     <Compile Include="Models\MapData.cs" />
     <Compile Include="Models\Modes.cs" />
     <Compile Include="Models\NPCSells.cs" />
@@ -134,6 +135,7 @@
     <Compile Include="Models\ObjectContainsCurrency.cs" />
     <Compile Include="Models\ObjectMining.cs" />
     <Compile Include="Models\Sourcemore.cs" />
+    <Compile Include="Models\ZoneFishingLoot.cs" />
     <Compile Include="SqlBuilder\SqlBuilder.cs" />
     <Compile Include="SqlBuilder\SqlBuilderException.cs" />
     <Compile Include="SqlBuilder\SqlItem.cs" />

@@ -88,7 +88,7 @@ namespace WowHeadParser.Entities
             bool optionSelected = false;
             String questHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
-            if (questHtml.Contains("inputbox-error") || questHtml.Contains("database-detail-page-not-found-message"))
+            if (questHtml.Contains("inputbox-error") || questHtml.Contains("database-detail-page-not-found-message") || questHtml.Contains("This quest was marked obsolete by Blizzard and cannot be obtained or completed"))
                 return false;
 
             if (IsCheckboxChecked("starter/ender"))

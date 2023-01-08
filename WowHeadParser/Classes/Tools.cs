@@ -216,21 +216,26 @@ namespace WowHeadParser
                 {
                     using (HttpResponseMessage response = webClient.GetAsync(url).Result)
                     {
-                        using (HttpContent content = response.Content)
+                        if (response.IsSuccessStatusCode)
+                            using (HttpContent content = response.Content)
+                            {
+                                var result = content.ReadAsStringAsync();
+                                result.Wait();
+
+                                try
+                                {
+                                    cacheManager.AddDataAsync(url, result.Result).Wait();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.Write(ex);
+                                }
+
+                                return result.Result;
+                            }
+                        else if (response.StatusCode == HttpStatusCode.NotFound)
                         {
-                            var result = content.ReadAsStringAsync();
-                            result.Wait();
-
-                            try
-                            {
-                                cacheManager.AddDataAsync(url, result.Result).Wait();
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.Write(ex);
-                            }
-
-                            return result.Result;
+                            cacheManager.AddDataAsync(url, "").Wait();
                         }
                     }
                 }
@@ -328,6 +333,11 @@ namespace WowHeadParser
             if (Math.Round(value) == 0 && value != 0)
                 returnFloat = value;
 
+            if (returnFloat < 0)
+                returnFloat = returnFloat * -1;
+
+            if (returnFloat == 0)
+                returnFloat = 100;
 
             var retVal = returnFloat.ToString("F99").TrimEnd("0".ToCharArray()).Replace(",", ".").TrimEnd(".".ToCharArray());
             
