@@ -320,7 +320,7 @@ namespace WowHeadParser
             return jsonString;
         }
 
-        public static String NormalizeFloat(float value)
+        public static String NormalizeFloat(float value, int totalNumItems)
         {
             float returnFloat = value;
 
@@ -337,12 +337,18 @@ namespace WowHeadParser
                 returnFloat = returnFloat * -1;
 
             if (returnFloat == 0)
-                returnFloat = 100;
+                returnFloat = 1 / totalNumItems;
 
             var retVal = returnFloat.ToString("F99").TrimEnd("0".ToCharArray()).Replace(",", ".").TrimEnd(".".ToCharArray());
-            
-            if (retVal == "-∞")
-                retVal = "100";
+
+            if (retVal == "∞" || retVal == "")
+            {
+                returnFloat = 1 / totalNumItems;
+                returnFloat.ToString("F99").TrimEnd("0".ToCharArray()).Replace(",", ".").TrimEnd(".".ToCharArray());
+
+                if (retVal == "∞" || retVal == "")
+                    retVal = "100";
+            }
 
             return retVal;
         }
@@ -623,7 +629,7 @@ namespace WowHeadParser
 
             float baseHp = m_baseHpForLevelAndClass[exp][level][classIndex];
 
-            return NormalizeFloat(currentHealth / baseHp);
+            return NormalizeFloat(currentHealth / baseHp, 1);
         }
 
         private static List<ItemExtendedCostEntry> m_itemExtendedCost = null;

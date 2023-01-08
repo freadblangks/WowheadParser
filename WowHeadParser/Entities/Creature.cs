@@ -230,7 +230,7 @@ namespace WowHeadParser.Entities
                 if (creatureSkinningJSon != null)
                 {
                     CreatureLootItemParsing[] creatureLootDatas = JsonConvert.DeserializeObject<CreatureLootItemParsing[]>(creatureSkinningJSon);
-                    SetCreatureSkinningData(creatureLootDatas, Int32.Parse(creatureSkinningCount));
+                    SetCreatureSkinningData(creatureLootDatas, Int32.Parse(creatureSkinningCount), creatureLootDatas.Length);
                     optionSelected = true;
                 }
             }
@@ -389,13 +389,13 @@ namespace WowHeadParser.Entities
             m_creatureLootDatas = lootsData.ToArray();
         }
 
-        public void SetCreatureSkinningData(CreatureLootItemParsing[] creatureSkinningDatas, int totalCount)
+        public void SetCreatureSkinningData(CreatureLootItemParsing[] creatureSkinningDatas, int totalCount, int len)
         {
             for (uint i = 0; i < creatureSkinningDatas.Length; ++i)
             {
                 float percent = (float)creatureSkinningDatas[i].count * 100 / (float)totalCount;
 
-                creatureSkinningDatas[i].percent = Tools.NormalizeFloat(percent);
+                creatureSkinningDatas[i].percent = Tools.NormalizeFloat(percent, len);
             }
 
             m_creatureSkinningDatas = creatureSkinningDatas;
@@ -549,6 +549,8 @@ namespace WowHeadParser.Entities
                 m_npcVendorBuilder = new SqlBuilder("npc_vendor", "entry", SqlQueryType.DeleteInsert);
                 m_npcVendorBuilder.SetFieldsNames("slot", "item", "maxcount", "incrtime", "ExtendedCost", "type", "PlayerConditionID");
 
+                m_npcVendorDatas = m_npcVendorDatas.Distinct(new NpcVendorParsingComparer()).ToArray();
+
                 foreach (NpcVendorParsing npcVendorData in m_npcVendorDatas)
                     m_npcVendorBuilder.AppendFieldsValue(m_creatureTemplateData.id, npcVendorData.slot, npcVendorData.id, npcVendorData.avail, npcVendorData.incrTime, npcVendorData.integerExtendedCost, 1, 0);
 
@@ -611,11 +613,12 @@ namespace WowHeadParser.Entities
 
                             if (idMultiplier < 1)
                                 continue;
+                            
 
                             m_creatureLootBuilder.AppendFieldsValue(entry, // Entry
                                                                     creatureLootData.id * idMultiplier, // Item
                                                                     0, // Reference
-                                                                    Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent), // Chance
+                                                                    Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, entryList.Count), // Chance
                                                                     creatureLootData.questRequired, // QuestRequired
                                                                     lootMask, // LootMode
                                                                     0, // GroupId
@@ -631,7 +634,7 @@ namespace WowHeadParser.Entities
                             m_creatureLootBuilder.AppendFieldsValue(templateEntry, // Entry
                                                                     0, // Item
                                                                     templateEntry, // Reference
-                                                                    Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent), // Chance
+                                                                    Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, 1), // Chance
                                                                     0, // QuestRequired
                                                                     lootMask, // LootMode
                                                                     0, // GroupId
@@ -644,7 +647,7 @@ namespace WowHeadParser.Entities
                         m_creatureReferenceLootBuilder.AppendFieldsValue(templateEntry, // Entry
                                                                          creatureLootData.id, // Item
                                                                          0, // Reference
-                                                                         Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent), // Chance
+                                                                         Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, 1), // Chance
                                                                          creatureLootData.questRequired, // QuestRequired
                                                                          lootMask, // LootMode
                                                                          1, // GroupId
@@ -686,10 +689,10 @@ namespace WowHeadParser.Entities
 
             if (IsCheckboxChecked("trainer") && m_creatureTrainerDatas != null)
             {
-                m_creatureTrainerBuilder = new SqlBuilder("npc_trainer", "entry", SqlQueryType.DeleteInsert);
+                m_creatureTrainerBuilder = new SqlBuilder("npc_trainer", "id", SqlQueryType.DeleteInsert);
                 m_creatureTrainerBuilder.SetFieldsNames("SpellID", "MoneyCost", "ReqSkillLine", "ReqSkillRank", "ReqLevel");
 
-                returnSql += "UPDATE creature_template SET npc_flag = 16 WHERE entry = " + m_creatureTemplateData.id + ";\n";
+                returnSql += "UPDATE creature_template SET npcflag = 16 WHERE entry = " + m_creatureTemplateData.id + ";\n";
                 foreach (CreatureTrainerParsing creatureTrainerData in m_creatureTrainerDatas)
                 {
                     int reqskill = creatureTrainerData.learnedat > 0 ? creatureTrainerData.skill[0] : 0;
@@ -699,24 +702,44 @@ namespace WowHeadParser.Entities
                 returnSql += m_creatureTrainerBuilder.ToString() + "\n";
             }
 
+            var questInfo = new Dictionary<int, Quest>();
+
             if (IsCheckboxChecked("quest starter") && m_creatureQuestStarterDatas != null)
             {
-                m_creatureQuestStarterBuilder = new SqlBuilder("creature_queststarter", "entry", SqlQueryType.DeleteInsert);
+                m_creatureQuestStarterBuilder = new SqlBuilder("creature_queststarter", "id", SqlQueryType.DeleteInsert);
                 m_creatureQuestStarterBuilder.SetFieldsNames("quest");
 
                 foreach (QuestStarterEnderParsing creatureQuestStarterData in m_creatureQuestStarterDatas)
-                    m_creatureQuestStarterBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureQuestStarterData.id);
+                {
+                    if (!questInfo.TryGetValue(creatureQuestStarterData.id, out var quest))
+                    {
+                        quest = new Quest(creatureQuestStarterData.id);
+                        quest.PopulateSite();
+                    }
+                    
+                    if (quest.QuestIsValid)
+                        m_creatureQuestStarterBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureQuestStarterData.id);
+                }
 
                 returnSql += m_creatureQuestStarterBuilder.ToString() + "\n";
             }
 
             if (IsCheckboxChecked("quest ender") && m_creatureQuestEnderDatas != null)
             {
-                m_creatureQuestEnderBuilder = new SqlBuilder("creature_questender", "entry", SqlQueryType.DeleteInsert);
+                m_creatureQuestEnderBuilder = new SqlBuilder("creature_questender", "id", SqlQueryType.DeleteInsert);
                 m_creatureQuestEnderBuilder.SetFieldsNames("quest");
 
                 foreach (QuestStarterEnderParsing creatureQuestEnderData in m_creatureQuestEnderDatas)
-                    m_creatureQuestEnderBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureQuestEnderData.id);
+                {
+                    if (!questInfo.TryGetValue(creatureQuestEnderData.id, out var quest))
+                    {
+                        quest = new Quest(creatureQuestEnderData.id);
+                        quest.PopulateSite();
+                    }
+
+                    if (quest.QuestIsValid)
+                        m_creatureQuestEnderBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureQuestEnderData.id);
+                }
 
                 returnSql += m_creatureQuestEnderBuilder.ToString() + "\n";
             }
@@ -747,5 +770,18 @@ namespace WowHeadParser.Entities
         protected SqlBuilder m_creatureTrainerBuilder;
         protected SqlBuilder m_creatureQuestStarterBuilder;
         protected SqlBuilder m_creatureQuestEnderBuilder;
+    }
+
+    class NpcVendorParsingComparer : IEqualityComparer<NpcVendorParsing>
+    {
+        public bool Equals(NpcVendorParsing x, NpcVendorParsing y)
+        {
+            return x.id == y.id && x.integerExtendedCost == y.integerExtendedCost;
+        }
+
+        public int GetHashCode(NpcVendorParsing obj)
+        {
+            return obj.id.GetHashCode() ^ obj.integerExtendedCost.GetHashCode();
+        }
     }
 }

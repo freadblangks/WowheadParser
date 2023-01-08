@@ -229,7 +229,7 @@ namespace WowHeadParser.Entities
 
                 foreach (ItemLootTemplateParsing itemLootData in m_itemLootTemplateDatas)
                 {
-                    String percent = Tools.NormalizeFloat((float)itemLootData.count / (float)m_lootMaxCount * 100);
+                    String percent = Tools.NormalizeFloat((float)itemLootData.count / (float)m_lootMaxCount * 100, m_itemLootTemplateDatas.Length);
                     
                     int minLootCount = itemLootData.stack.Length >= 1 ? itemLootData.stack[0] : 1;
                     int maxLootCount = itemLootData.stack.Length >= 2 ? itemLootData.stack[1] : minLootCount;
@@ -271,7 +271,7 @@ namespace WowHeadParser.Entities
                 foreach (ItemDroppedByTemplateParsing itemDroppedByData in m_itemDroppedByDatas)
                 {
                     float percent = ((float)itemDroppedByData.count / (float)itemDroppedByData.outof) * 100.0f;
-                    String percentStr = Tools.NormalizeFloat(percent);
+                    String percentStr = Tools.NormalizeFloat(percent, m_itemDroppedByDatas.Length);
 
                     switch (GetVersion())
                     {

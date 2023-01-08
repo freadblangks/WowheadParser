@@ -78,7 +78,7 @@ namespace WowHeadParser.Entities
 
                 foreach (ZoneFishingLoot fishingLootdata in m_fishingDatas)
                 {
-                    String percent = Tools.NormalizeFloat(((float)fishingLootdata.count / (float)totalCount * 100));
+                    String percent = Tools.NormalizeFloat(((float)fishingLootdata.count / (float)totalCount * 100), m_fishingDatas.Length);
 
                     if (fishingLootdata.stack != null && fishingLootdata.stack.Length > 1)
                         m_FishingLootTemplateBuilder.AppendFieldsValue(m_data.id, fishingLootdata.id, percent, 1, 0, fishingLootdata.stack[0], fishingLootdata.stack[1], fishingLootdata.name.Replace("'", "\\'"));

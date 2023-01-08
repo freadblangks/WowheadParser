@@ -124,7 +124,7 @@ namespace WowHeadParser.Entities
                 if (gameobjectHerbalismJSon != null)
                 {
                     GameObjectLootParsing[] gameobjectHerbalismDatas = JsonConvert.DeserializeObject<GameObjectLootParsing[]>(gameobjectHerbalismJSon);
-                    SetGameobjectHerbalismOrMiningData(gameobjectHerbalismDatas, Int32.Parse(gameobjectHerbalismTotalCount), true);
+                    SetGameobjectHerbalismOrMiningData(gameobjectHerbalismDatas, Int32.Parse(gameobjectHerbalismTotalCount), true, gameobjectHerbalismDatas.Length);
                     optionSelected = true;
                 }
             }
@@ -138,7 +138,7 @@ namespace WowHeadParser.Entities
                 if (gameobjectMiningJSon != null)
                 {
                     GameObjectLootParsing[] gameobjectMiningDatas = JsonConvert.DeserializeObject<GameObjectLootParsing[]>(gameobjectMiningJSon);
-                    SetGameobjectHerbalismOrMiningData(gameobjectMiningDatas, Int32.Parse(gameobjectMiningTotalCount), false);
+                    SetGameobjectHerbalismOrMiningData(gameobjectMiningDatas, Int32.Parse(gameobjectMiningTotalCount), false, gameobjectMiningDatas.Length);
                     optionSelected = true;
                 }
             }
@@ -181,13 +181,13 @@ namespace WowHeadParser.Entities
             m_gameobjectLootDatas = deltaList.ToArray();
         }
 
-        public void SetGameobjectHerbalismOrMiningData(GameObjectLootParsing[] gameobjectHerbalismOrMiningDatas, int totalCount, bool herbalism)
+        public void SetGameobjectHerbalismOrMiningData(GameObjectLootParsing[] gameobjectHerbalismOrMiningDatas, int totalCount, bool herbalism, int num)
         {
             for (uint i = 0; i < gameobjectHerbalismOrMiningDatas.Length; ++i)
             {
                 float percent = (float)gameobjectHerbalismOrMiningDatas[i].count * 100 / (float)totalCount;
 
-                gameobjectHerbalismOrMiningDatas[i].percent = Tools.NormalizeFloat(percent);
+                gameobjectHerbalismOrMiningDatas[i].percent = Tools.NormalizeFloat(percent, num);
             }
 
             if (herbalism)
@@ -260,7 +260,7 @@ namespace WowHeadParser.Entities
                         m_gameobjectLootBuilder.AppendFieldsValue(m_data.id, // Entry
                                                                     gameobjectLootData.id * idMultiplier, // Item
                                                                     0, // Reference
-                                                                    Tools.NormalizeFloat(mode.Percent), // Chance
+                                                                    Tools.NormalizeFloat(mode.Percent, m_gameobjectLootDatas.Length), // Chance
                                                                     gameobjectLootData.questRequired, // QuestRequired
                                                                     lootMask, // LootMode
                                                                     0, // GroupId

@@ -16,7 +16,7 @@ namespace WowHeadParser.Entities
 {
     class Quest : Entity
     {
-
+        public string Site { get; set; } = "";
         struct QuestTemplateParsing
         {
             public int id;
@@ -78,6 +78,16 @@ namespace WowHeadParser.Entities
             return tempArray;
         }
 
+        public void PopulateSite()
+        {
+            Site = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
+
+            if (Site.Contains("inputbox-error") || Site.Contains("database-detail-page-not-found-message") || Site.Contains("This quest was marked obsolete by Blizzard and cannot be obtained or completed"))
+                QuestIsValid = false;
+        }
+
+        public bool QuestIsValid { get; set; } = true;
+
         public override bool ParseSingleJson(int id = 0)
         {
             if (m_data.id == 0 && id == 0)
@@ -85,17 +95,17 @@ namespace WowHeadParser.Entities
             else if (m_data.id == 0 && id != 0)
                 m_data.id = id;
 
+            PopulateSite();
             bool optionSelected = false;
-            String questHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
-            if (questHtml.Contains("inputbox-error") || questHtml.Contains("database-detail-page-not-found-message") || questHtml.Contains("This quest was marked obsolete by Blizzard and cannot be obtained or completed"))
+            if (!QuestIsValid)
                 return false;
 
             if (IsCheckboxChecked("starter/ender"))
             {
                 String dataPattern = @"var myMapper = new Mapper\((.+)\)";
 
-                String questDataJSon = Tools.ExtractJsonFromWithPattern(questHtml, dataPattern);
+                String questDataJSon = Tools.ExtractJsonFromWithPattern(Site, dataPattern);
                 if (questDataJSon != null)
                 {
                     dynamic data = JsonConvert.DeserializeObject<dynamic>(questDataJSon);
@@ -108,7 +118,7 @@ namespace WowHeadParser.Entities
             {
                 String seriePattern = "(<table class=\"series\">.+?</table>)";
 
-                String questSerieXml = Tools.ExtractJsonFromWithPattern(questHtml, seriePattern);
+                String questSerieXml = Tools.ExtractJsonFromWithPattern(Site, seriePattern);
                 if (questSerieXml != null)
                 {
                     SetSerie(questSerieXml).Wait();
@@ -120,7 +130,7 @@ namespace WowHeadParser.Entities
             {
                 String classLinePattern = @"\[li\](?:Class|Classes): (.+)\[\\/li\]\[li\]\[icon name=quest_start\]";
 
-                String questClassLineJSon = Tools.ExtractJsonFromWithPattern(questHtml, classLinePattern);
+                String questClassLineJSon = Tools.ExtractJsonFromWithPattern(Site, classLinePattern);
                 if (questClassLineJSon != null)
                 {
                     List<String> questClass = Tools.ExtractListJsonFromWithPattern(questClassLineJSon, @"\[class=(\d+)\]");
@@ -133,8 +143,8 @@ namespace WowHeadParser.Entities
 
             if (IsCheckboxChecked("team"))
             {
-                bool isAlliance = questHtml.Contains(@"Side: [span class=icon-alliance]Alliance[\/span]");
-                bool isHorde = questHtml.Contains(@"Side: [span class=icon-horde]Horde[\/span]");
+                bool isAlliance = Site.Contains(@"Side: [span class=icon-alliance]Alliance[\/span]");
+                bool isHorde = Site.Contains(@"Side: [span class=icon-horde]Horde[\/span]");
 
                 SetTeam(isAlliance, isHorde);
                 optionSelected = true;
