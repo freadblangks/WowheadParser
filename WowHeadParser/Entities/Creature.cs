@@ -610,7 +610,7 @@ namespace WowHeadParser.Entities
                         var chance = Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, entryList.Count);
 
                         if (creatureLootData.questRequired == "1")
-                            chance = "80";
+                            chance = "100";
 
                         foreach (int entry in entryList)
                         {
@@ -651,7 +651,7 @@ namespace WowHeadParser.Entities
                         var chance = Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, entryList.Count);
 
                         if (creatureLootData.questRequired == "1")
-                            chance = "80";
+                            chance = "100";
 
                         m_creatureReferenceLootBuilder.AppendFieldsValue(templateEntry, // Entry
                                                                          creatureLootData.id, // Item
