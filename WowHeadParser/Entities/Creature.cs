@@ -607,18 +607,22 @@ namespace WowHeadParser.Entities
                                 break; ;
                         }
 
+                        var chance = Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, entryList.Count);
+
+                        if (creatureLootData.questRequired == "1")
+                            chance = "80";
+
                         foreach (int entry in entryList)
                         {
                             int idMultiplier = creatureLootCurrencyData != null ? -1 : 1;
 
                             if (idMultiplier < 1)
                                 continue;
-                            
 
                             m_creatureLootBuilder.AppendFieldsValue(entry, // Entry
                                                                     creatureLootData.id * idMultiplier, // Item
                                                                     0, // Reference
-                                                                    Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, entryList.Count), // Chance
+                                                                    chance, // Chance
                                                                     creatureLootData.questRequired, // QuestRequired
                                                                     lootMask, // LootMode
                                                                     0, // GroupId
@@ -644,10 +648,15 @@ namespace WowHeadParser.Entities
                             referenceAdded = true;
                         }
 
+                        var chance = Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, entryList.Count);
+
+                        if (creatureLootData.questRequired == "1")
+                            chance = "80";
+
                         m_creatureReferenceLootBuilder.AppendFieldsValue(templateEntry, // Entry
                                                                          creatureLootData.id, // Item
                                                                          0, // Reference
-                                                                         Tools.NormalizeFloat(creatureLootData.ModesObj.ModeMap.FirstOrDefault().Value.Percent, 1), // Chance
+                                                                         chance, // Chance
                                                                          creatureLootData.questRequired, // QuestRequired
                                                                          lootMask, // LootMode
                                                                          1, // GroupId
