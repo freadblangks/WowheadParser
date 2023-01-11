@@ -270,8 +270,9 @@ namespace WowHeadParser.Entities
 
                     foreach (String questId in questInSerieByStep[i])
                     {
-                        if (parsedQuests.Contains(questId))
-                            continue;
+                        lock(parsedQuests)
+                            if (parsedQuests.Contains(questId))
+                                continue;
                         
                         var questInfo = WowClient.GetQuestAsync(int.Parse(questId));
                         questInfo.Wait();
@@ -303,7 +304,8 @@ namespace WowHeadParser.Entities
                                 ProvidedItemCount = 1;
                         }
 
-                        parsedQuests.Add(questId);
+                        lock(parsedQuests)
+                            parsedQuests.Add(questId);
                         m_builderSerieWithPrevious.AppendFieldsValue(questId, previousQuest, nextQuest, exclusiveGroup, RequiredMinRepFaction, RequiredMaxRepFaction, RequiredMinRepValue, RequiredMaxRepValue, ProvidedItemCount);
                     }
                 }
