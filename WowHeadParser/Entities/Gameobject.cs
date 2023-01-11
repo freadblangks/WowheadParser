@@ -256,19 +256,27 @@ namespace WowHeadParser.Entities
                         lootMask |= lootMode;
                     }
 
+
                     if (gameobjectLootData.ModesObj.ModeMap.TryGetValue("0", out var mode))
+                    {
+
+                        var chance = Tools.NormalizeFloat(mode.Percent, m_gameobjectLootDatas.Length);
+
+                        if (gameobjectLootData.questRequired == "1")
+                            chance = "100";
+                        
                         m_gameobjectLootBuilder.AppendFieldsValue(m_data.id, // Entry
                                                                     gameobjectLootData.id * idMultiplier, // Item
                                                                     0, // Reference
-                                                                    Tools.NormalizeFloat(mode.Percent, m_gameobjectLootDatas.Length), // Chance
+                                                                    chance, // Chance
                                                                     gameobjectLootData.questRequired, // QuestRequired
                                                                     lootMask, // LootMode
                                                                     0, // GroupId
                                                                     minLootCount, // MinCount
                                                                     maxLootCount, // MaxCount
                                                                     gameobjectLootData.name.Replace("'", "\\'")); // Comment
-                   
-                    
+
+                    }
 
                     
                 }
