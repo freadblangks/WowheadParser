@@ -11,13 +11,15 @@ using static WowHeadParser.MainWindow;
 using System.Windows.Forms;
 using WowHeadParser.Models;
 using static WowHeadParser.Entities.Gameobject;
+using WOWSharp.Community.Diablo;
+using WOWSharp.Community.Wow;
 
 namespace WowHeadParser.Entities
 {
     enum reactOrder
     {
-        ALLIANCE    = 0,
-        HORDE       = 1
+        ALLIANCE = 0,
+        HORDE = 1
     }
 
     class CreatureTemplateParsing
@@ -87,12 +89,29 @@ namespace WowHeadParser.Entities
 
     class CreatureTrainerParsing
     {
-        public int id;
-        public int trainingcost;
-        public int[] skill;
-        public int learnedat;
-        public int level;
+        public int cat { get; set; }
+        public int[] colors { get; set; }
+        public int id { get; set; }
+        public int learnedat { get; set; }
+        public int level { get; set; }
+        public string name { get; set; }
+        public int nskillup { get; set; }
+        public int schools { get; set; }
+        public int[] skill { get; set; }
+        public int[] source { get; set; }
+        public int trainingcost { get; set; }
+        public int[] creates { get; set; }
+        public int quality { get; set; }
+        public int[][] reagents { get; set; }
+        public Optionalreagent[] optionalReagents { get; set; }
     }
+
+    public class Optionalreagent
+    {
+        public int id { get; set; }
+        public string description { get; set; }
+    }
+
 
     class QuestStarterEnderParsing
     {
@@ -324,12 +343,12 @@ namespace WowHeadParser.Entities
                     int cost = Convert.ToInt32(npcVendorDatas[i].cost[0]);
                     npcVendorDatas[i].integerCost = cost;
 
-                    List<Int32> itemId          = new List<Int32>();
-                    List<Int32> itemCount       = new List<Int32>();
+                    List<Int32> itemId = new List<Int32>();
+                    List<Int32> itemCount = new List<Int32>();
 
-                    List<Int32> currencyId      = new List<Int32>();
-                    List<Int32> currencyCount   = new List<Int32>();
-                    
+                    List<Int32> currencyId = new List<Int32>();
+                    List<Int32> currencyCount = new List<Int32>();
+
                     if (npcVendorDatas[i].cost.Count > 2)
                         foreach (JArray itemCost in npcVendorDatas[i].cost[2])
                         {
@@ -380,7 +399,7 @@ namespace WowHeadParser.Entities
                 lootsData.Add(new CreatureLootParsing()
                 {
                     id = gameobjectLootItemData.id,
-                    questRequired =  "0",
+                    questRequired = "0",
                     stack = gameobjectLootItemData.stack,
                     ModesObj = gameobjectLootItemData.modes
                 });
@@ -431,46 +450,46 @@ namespace WowHeadParser.Entities
                 switch (GetVersion())
                 {
                     case "7.3.5.26972":
-                    {
-                        m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
-                        m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "modelid1", "rank", "type", "family");
+                        {
+                            m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
+                            m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "modelid1", "rank", "type", "family");
 
-                        m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_modelid, m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
-                        returnSql += m_creatureTemplateBuilder.ToString() + "\n";
-                    }
-                    break;
+                            m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_modelid, m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
+                            returnSql += m_creatureTemplateBuilder.ToString() + "\n";
+                        }
+                        break;
                     case "8.0.1.28153":
-                    {
-                        m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
-                        m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "rank", "type", "family");
+                        {
+                            m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
+                            m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "rank", "type", "family");
 
-                        m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
-                        returnSql += m_creatureTemplateBuilder.ToString() + "\n";
+                            m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
+                            returnSql += m_creatureTemplateBuilder.ToString() + "\n";
 
-                        // models are now saved in creature_template_model as of BFA
-                        m_creatureTemplateModelBuilder = new SqlBuilder("creature_template_model", "CreatureID");
-                        m_creatureTemplateModelBuilder.SetFieldsNames("Idx", "CreatureDisplayID", "Probability");
+                            // models are now saved in creature_template_model as of BFA
+                            m_creatureTemplateModelBuilder = new SqlBuilder("creature_template_model", "CreatureID");
+                            m_creatureTemplateModelBuilder.SetFieldsNames("Idx", "CreatureDisplayID", "Probability");
 
-                        m_creatureTemplateModelBuilder.AppendFieldsValue(m_creatureTemplateData.id, "0", m_modelid, "1");
-                        returnSql += m_creatureTemplateModelBuilder.ToString() + "\n";
-                    }
-                    break;
+                            m_creatureTemplateModelBuilder.AppendFieldsValue(m_creatureTemplateData.id, "0", m_modelid, "1");
+                            returnSql += m_creatureTemplateModelBuilder.ToString() + "\n";
+                        }
+                        break;
                     default: // 9.2.0.42560
-                    {
-                        m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
-                        m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "rank", "type", "family");
+                        {
+                            m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
+                            m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "rank", "type", "family");
 
-                        m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
-                        returnSql += m_creatureTemplateBuilder.ToString() + "\n";
+                            m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
+                            returnSql += m_creatureTemplateBuilder.ToString() + "\n";
 
-                        // models are now saved in creature_template_model as of BFA
-                        m_creatureTemplateModelBuilder = new SqlBuilder("creature_template_model", "CreatureID");
-                        m_creatureTemplateModelBuilder.SetFieldsNames("Idx", "CreatureDisplayID", "Probability");
+                            // models are now saved in creature_template_model as of BFA
+                            m_creatureTemplateModelBuilder = new SqlBuilder("creature_template_model", "CreatureID");
+                            m_creatureTemplateModelBuilder.SetFieldsNames("Idx", "CreatureDisplayID", "Probability");
 
-                        m_creatureTemplateModelBuilder.AppendFieldsValue(m_creatureTemplateData.id, "0", m_modelid, "1");
-                        returnSql += m_creatureTemplateModelBuilder.ToString() + "\n";
-                    }
-                    break;
+                            m_creatureTemplateModelBuilder.AppendFieldsValue(m_creatureTemplateData.id, "0", m_modelid, "1");
+                            returnSql += m_creatureTemplateModelBuilder.ToString() + "\n";
+                        }
+                        break;
                 }
             }
 
@@ -517,16 +536,16 @@ namespace WowHeadParser.Entities
                     switch (GetVersion())
                     {
                         case "9.2.0.42560":
-                        {
-                            m_creatureLocalesBuilder = new SqlBuilder("creature_template_locale", "entry");
+                            {
+                                m_creatureLocalesBuilder = new SqlBuilder("creature_template_locale", "entry");
 
-                        }
-                        break;
+                            }
+                            break;
                         default: // 8.x and 7.x
-                        {
-                            m_creatureLocalesBuilder = new SqlBuilder("creature_template_locales", "entry");
-                        }
-                        break;
+                            {
+                                m_creatureLocalesBuilder = new SqlBuilder("creature_template_locales", "entry");
+                            }
+                            break;
                     }
 
                     m_creatureLocalesBuilder.SetFieldsNames("locale", "Name", "Title");
@@ -575,16 +594,16 @@ namespace WowHeadParser.Entities
                     List<int> entryList = new List<int>();
 
                     CreatureLootItemParsing creatureLootItemData = null;
-       
+
                     if (creatureLootData is CreatureLootItemParsing clip)
                         creatureLootItemData = clip;
-                
+
 
                     CreatureLootCurrencyParsing creatureLootCurrencyData = null;
-               
+
                     if (creatureLootData is CreatureLootCurrencyParsing clcp)
                         creatureLootCurrencyData = clcp;
-               
+
 
                     int minLootCount = creatureLootData.stack.Length >= 1 ? creatureLootData.stack[0] : 1;
                     int maxLootCount = creatureLootData.stack.Length >= 2 ? creatureLootData.stack[1] : minLootCount;
@@ -666,7 +685,7 @@ namespace WowHeadParser.Entities
                     }
 
                     if (creatureLootData.percent == "0")
-                        m_zeroPercentLootChance = true;                   
+                        m_zeroPercentLootChance = true;
                 }
 
                 returnSql += m_creatureLootBuilder.ToString() + "\n";
@@ -698,17 +717,52 @@ namespace WowHeadParser.Entities
 
             if (IsCheckboxChecked("trainer") && m_creatureTrainerDatas != null)
             {
-                m_creatureTrainerBuilder = new SqlBuilder("npc_trainer", "id", SqlQueryType.DeleteInsert);
-                m_creatureTrainerBuilder.SetFieldsNames("SpellID", "MoneyCost", "ReqSkillLine", "ReqSkillRank", "ReqLevel");
-
-                returnSql += "UPDATE creature_template SET npcflag = 16 WHERE entry = " + m_creatureTemplateData.id + ";\n";
+                m_creatureTrainerBaseBuilder = new SqlBuilder("trainer", "Id", SqlQueryType.DeleteInsert);
+                m_creatureTrainerBaseBuilder.SetFieldsNames("type", "greeting");
+                m_creatureTrainerBuilder = new SqlBuilder("trainer_spell", "TrainerId", SqlQueryType.DeleteInsert);
+                m_creatureTrainerBuilder.SetFieldsNames("SpellID", "MoneyCost", "ReqSkillLine", "ReqSkillRank", "ReqAbility1", "ReqAbility2", "ReqAbility3", "ReqLevel");
+               
+                returnSql += "UPDATE creature_template SET npcflag = npcflag | 16 WHERE entry = " + m_creatureTemplateData.id + ";\n";
+                
+                int trainerType = -1;
+                string trainerGreeting = "";
                 foreach (CreatureTrainerParsing creatureTrainerData in m_creatureTrainerDatas)
                 {
+                    if (trainerType == -1)
+                    {
+                        if (_professionsTrainer.Contains(creatureTrainerData.name))
+                        {
+                            trainerType = 2;
+                            trainerGreeting = creatureTrainerData.name;
+                        }
+
+                        if (_ridingTrainer.Contains(creatureTrainerData.id))
+                        {
+                            trainerType = 1;
+                            trainerGreeting = "Riding";
+                        }
+                    }
+                    
                     int reqskill = creatureTrainerData.learnedat > 0 ? creatureTrainerData.skill[0] : 0;
-                    m_creatureTrainerBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureTrainerData.id, creatureTrainerData.trainingcost, reqskill, creatureTrainerData.learnedat, creatureTrainerData.level);
+                    int reqskill1 = creatureTrainerData.skill.Length > 1 ? creatureTrainerData.skill[1] : 0; // creatureTrainerData.learnedat
+                    int reqskill2 = creatureTrainerData.skill.Length > 2 ? creatureTrainerData.skill[2] : 0;
+                    int reqskill3 = creatureTrainerData.skill.Length > 3 ? creatureTrainerData.skill[3] : 0;
+                    m_creatureTrainerBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureTrainerData.id, creatureTrainerData.trainingcost, reqskill, creatureTrainerData.learnedat, reqskill1, reqskill2, reqskill3, creatureTrainerData.level);
                 }
 
+                if (trainerType == -1)
+                {
+                    trainerType = 2;
+                    trainerGreeting = "profession training";
+                }
+
+                
+                m_creatureTrainerBaseBuilder.AppendFieldsValue(m_creatureTemplateData.id, trainerType, $"Greetings! Can I teach you {trainerGreeting}?");
+
+
+                returnSql += m_creatureTrainerBaseBuilder.ToString() + "\n";
                 returnSql += m_creatureTrainerBuilder.ToString() + "\n";
+
             }
 
             var questInfo = new Dictionary<int, Quest>();
@@ -725,7 +779,7 @@ namespace WowHeadParser.Entities
                         quest = new Quest(creatureQuestStarterData.id);
                         quest.PopulateSite();
                     }
-                    
+
                     if (quest.QuestIsValid)
                         m_creatureQuestStarterBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureQuestStarterData.id);
                 }
@@ -760,7 +814,7 @@ namespace WowHeadParser.Entities
         private bool m_isBoss;
         private int m_modelid;
         private String m_subname;
-
+        private string m_trainerType;
         protected CreatureTemplateParsing m_creatureTemplateData;
         protected NpcVendorParsing[] m_npcVendorDatas;
         protected CreatureLootParsing[] m_creatureLootDatas;
@@ -777,8 +831,42 @@ namespace WowHeadParser.Entities
         protected SqlBuilder m_creatureReferenceLootBuilder;
         protected SqlBuilder m_creatureSkinningBuilder;
         protected SqlBuilder m_creatureTrainerBuilder;
+        protected SqlBuilder m_creatureTrainerBaseBuilder;
         protected SqlBuilder m_creatureQuestStarterBuilder;
         protected SqlBuilder m_creatureQuestEnderBuilder;
+
+        HashSet<int> _ridingTrainer = new HashSet<int>()
+        {
+            90265,
+            33388,
+            34090,
+            33391,
+            34091,
+            54197,
+            90267,
+            33391
+        };
+
+        HashSet<string> _professionsTrainer = new HashSet<string>()
+        {
+            "Enchanting",
+            "Engineering",
+            "First Aid",
+            "Fishing",
+            "Herbalism",
+            "Inscription",
+            "Jewelcrafting",
+            "Leatherworking",
+            "Mining",
+            "Skinning",
+            "Tailoring",
+            "Alchemy",
+            "Blacksmithing",
+            "Cooking",
+            "Archaeology",
+            "Runeforging",
+            "Herb Gathering"
+        };
     }
 
     class NpcVendorParsingComparer : IEqualityComparer<NpcVendorParsing>

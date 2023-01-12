@@ -1,6 +1,7 @@
 ﻿/*
  * * Created by Traesh for AshamaneProject (https://github.com/AshamaneProject)
  */
+using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Sql;
 using System;
@@ -121,7 +122,17 @@ namespace WowHeadParser.Entities
                 String questSerieXml = Tools.ExtractJsonFromWithPattern(Site, seriePattern);
                 if (questSerieXml != null)
                 {
-                    SetSerie(questSerieXml).Wait();
+                    SetSerie(questSerieXml, false).Wait();
+
+
+                    HtmlDocument doc = new HtmlDocument();
+                    doc.LoadHtml(Site);
+                    var divs = doc.DocumentNode.SelectNodes("//div[@class='quick-facts-storyline-list']");
+                    
+                    if (divs != null && divs.Count != 0)
+                        foreach (var div in divs)
+                            SetSerie(div.InnerHtml, true).Wait();
+                    
                     optionSelected = true;
                 }
             }
@@ -204,51 +215,86 @@ namespace WowHeadParser.Entities
             }
         }
         static List<string> parsedQuests = new List<string>();
-        public async Task SetSerie(String serieXml)
+        public async Task SetSerie(String serieXml, bool li)
         {
             try
             {
                 XmlDocument doc = new XmlDocument();
                 doc.LoadXml(serieXml);
-
-                XmlNodeList trs = doc.DocumentElement.SelectNodes("tr");
                 Dictionary<int, List<String>> questInSerieByStep = new Dictionary<int, List<String>>();
                 int step = 0;
 
-                foreach (XmlNode tr in trs)
+                if (!li)
                 {
-                    int currentStep = step++;
-                    questInSerieByStep.Add(currentStep, new List<string>());
+                    XmlNodeList trs = doc.DocumentElement.SelectNodes("tr");
 
-                    XmlNode td = tr.SelectSingleNode("td");
-
-                    if (td == null)
-                        continue;
-
-                    XmlNode div = td.SelectSingleNode("div");
-
-                    if (div == null)
-                        continue;
-                    
-                    XmlNode b           = div.SelectSingleNode("b");
-                    XmlNodeList aList   = div.SelectNodes("a");
-
-                    // Current quest is writed with a simple "b" html tag
-                    if (div.SelectSingleNode("b") != null)
-                        questInSerieByStep[currentStep].Add(m_data.id.ToString());
-
-                    foreach (XmlNode a in aList)
+                    foreach (XmlNode tr in trs)
                     {
-                        XmlNode hrefAttr = a.Attributes.GetNamedItem("href");
+                        int currentStep = step++;
+                        questInSerieByStep.Add(currentStep, new List<string>());
 
-                        if (hrefAttr == null)
+                        XmlNode td = tr.SelectSingleNode("td");
+
+                        if (td == null)
                             continue;
 
-                        String href = hrefAttr.Value;
-                        String questId = href.Substring(7);
-                        questId = questId.Substring(0, questId.LastIndexOf("/"));
+                        XmlNode div = td.SelectSingleNode("div");
 
-                        questInSerieByStep[currentStep].Add(questId);
+                        if (div == null)
+                            continue;
+
+                        XmlNode b = div.SelectSingleNode("b");
+                        XmlNodeList aList = div.SelectNodes("a");
+
+                        // Current quest is writed with a simple "b" html tag
+                        if (div.SelectSingleNode("b") != null)
+                            questInSerieByStep[currentStep].Add(m_data.id.ToString());
+
+                        foreach (XmlNode a in aList)
+                        {
+                            XmlNode hrefAttr = a.Attributes.GetNamedItem("href");
+
+                            if (hrefAttr == null)
+                                continue;
+
+                            String href = hrefAttr.Value;
+                            String questId = href.Substring(7);
+                            questId = questId.Substring(0, questId.LastIndexOf("/"));
+
+                            questInSerieByStep[currentStep].Add(questId);
+                        }
+                    }
+                }
+                else
+                {
+                    XmlNodeList trs = doc.DocumentElement.SelectNodes("li");
+
+                    foreach (XmlNode tr in trs)
+                    {
+                        int currentStep = step++;
+                        questInSerieByStep.Add(currentStep, new List<string>());
+                        XmlNode b = tr.SelectSingleNode("span");
+                        XmlNodeList aList = tr.SelectNodes("a");
+
+                        if (b != null)
+                        {
+                            questInSerieByStep[currentStep].Add(m_data.id.ToString());
+                            continue;
+                        }
+
+                        foreach (XmlNode a in aList)
+                        {
+                            XmlNode hrefAttr = a.Attributes.GetNamedItem("href");
+
+                            if (hrefAttr == null)
+                                continue;
+
+                            String href = hrefAttr.Value;
+                            String questId = href.Substring(7);
+                            questId = questId.Substring(0, questId.LastIndexOf("/"));
+
+                            questInSerieByStep[currentStep].Add(questId);
+                        }
                     }
                 }
 
