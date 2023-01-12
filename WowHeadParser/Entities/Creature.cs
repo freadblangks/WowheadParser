@@ -730,11 +730,16 @@ namespace WowHeadParser.Entities
                 string trainerGreeting = "";
                 foreach (CreatureTrainerParsing creatureTrainerData in m_creatureTrainerDatas)
                 {
+                    int reqskill = creatureTrainerData.learnedat > 0 ? creatureTrainerData.skill[0] : 0;
+                    int learndAt = creatureTrainerData.learnedat;
+
                     if (trainerType == -1)
                     {
                         if (_professionsTrainer.Contains(creatureTrainerData.name))
                         {
                             trainerType = 2;
+                            reqskill = 0;
+                            learndAt = 0;
                             trainerGreeting = creatureTrainerData.name;
                         }
 
@@ -745,11 +750,11 @@ namespace WowHeadParser.Entities
                         }
                     }
                     
-                    int reqskill = creatureTrainerData.learnedat > 0 ? creatureTrainerData.skill[0] : 0;
+                    
                     int reqskill1 = creatureTrainerData.skill.Length > 1 ? creatureTrainerData.skill[1] : 0; // creatureTrainerData.learnedat
                     int reqskill2 = creatureTrainerData.skill.Length > 2 ? creatureTrainerData.skill[2] : 0;
                     int reqskill3 = creatureTrainerData.skill.Length > 3 ? creatureTrainerData.skill[3] : 0;
-                    m_creatureTrainerBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureTrainerData.id, creatureTrainerData.trainingcost, reqskill, creatureTrainerData.learnedat, reqskill1, reqskill2, reqskill3, creatureTrainerData.level);
+                    m_creatureTrainerBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureTrainerData.id, creatureTrainerData.trainingcost, reqskill, learndAt, reqskill1, reqskill2, reqskill3, creatureTrainerData.level);
                 }
 
                 if (trainerType == -1)
