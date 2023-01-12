@@ -719,6 +719,8 @@ namespace WowHeadParser.Entities
             {
                 m_creatureTrainerBaseBuilder = new SqlBuilder("trainer", "Id", SqlQueryType.DeleteInsert);
                 m_creatureTrainerBaseBuilder.SetFieldsNames("type", "greeting");
+                var trinerBuilder = new SqlBuilder("creature_trainer", "CreatureID", SqlQueryType.DeleteInsert);
+                trinerBuilder.SetFieldsNames("TrainerID", "MenuID", "OptionID");
                 m_creatureTrainerBuilder = new SqlBuilder("trainer_spell", "TrainerId", SqlQueryType.DeleteInsert);
                 m_creatureTrainerBuilder.SetFieldsNames("SpellID", "MoneyCost", "ReqSkillLine", "ReqSkillRank", "ReqAbility1", "ReqAbility2", "ReqAbility3", "ReqLevel");
                
@@ -756,10 +758,10 @@ namespace WowHeadParser.Entities
                     trainerGreeting = "profession training";
                 }
 
-                
+                trinerBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.id, 0, 0);
                 m_creatureTrainerBaseBuilder.AppendFieldsValue(m_creatureTemplateData.id, trainerType, $"Greetings! Can I teach you {trainerGreeting}?");
 
-
+                returnSql += trinerBuilder.ToString() + "\n";
                 returnSql += m_creatureTrainerBaseBuilder.ToString() + "\n";
                 returnSql += m_creatureTrainerBuilder.ToString() + "\n";
 
