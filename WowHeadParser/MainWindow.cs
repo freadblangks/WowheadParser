@@ -279,6 +279,7 @@ namespace WowHeadParser
                     leftListView.Items.Add("money");
                     leftListView.Items.Add("simple faction");
                     leftListView.Items.Add("template");
+                    leftListView.Items.Add("model");
                     rightDataGroup.Text = "Extra";
                     rightListView.Items.Add("loot");
                     rightListView.Items.Add("quest starter");

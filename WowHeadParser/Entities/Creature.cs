@@ -214,7 +214,8 @@ namespace WowHeadParser.Entities
             String dataPattern = @"\$\.extend\(g_npcs\[" + m_creatureTemplateData.id + @"\], (.+)\);";
             String creatureHealthPattern = @"<div>(?:Health|Vie): ((?:\d|,|\.)+)</div>";
             String creatureMoneyPattern = @"\[money=([0-9]+)\]";
-
+            String creatureModelIdPattern = @"WH\.Wow\.ModelViewer\.showLightbox\({&quot;type&quot;:[0-9]+,&quot;typeId&quot;:" + m_creatureTemplateData.id + @",&quot;displayId&quot;:([0-9]+)}\)";
+            
             String creatureTemplateDataJSon = Tools.ExtractJsonFromWithPattern(creatureHtml, dataPattern);
             if (creatureTemplateDataJSon != null)
             {
@@ -222,7 +223,8 @@ namespace WowHeadParser.Entities
 
                 String creatureHealthDataJSon = Tools.ExtractJsonFromWithPattern(creatureHtml, creatureHealthPattern);
                 String creatureMoneyData = Tools.ExtractJsonFromWithPattern(creatureHtml, creatureMoneyPattern);
-                SetCreatureTemplateData(creatureTemplateData, creatureMoneyData, creatureHealthDataJSon);
+                String creatureModelIdData = Tools.ExtractJsonFromWithPattern(creatureHtml, creatureModelIdPattern);
+                SetCreatureTemplateData(creatureTemplateData, creatureMoneyData, creatureHealthDataJSon, creatureModelIdData);
 
                 // Without m_creatureTemplateData we can't really do anything, so return false
                 if (m_creatureTemplateData == null)
@@ -329,12 +331,15 @@ namespace WowHeadParser.Entities
                 return false;
         }
 
-        public void SetCreatureTemplateData(CreatureTemplateParsing creatureData, String money, String creatureHealthDataJSon)
+        public void SetCreatureTemplateData(CreatureTemplateParsing creatureData, String money, String creatureHealthDataJSon, String modelid)
         {
             m_creatureTemplateData = creatureData;
 
             m_isBoss = false;
             m_faction = GetFactionFromReact();
+
+            if (!string.IsNullOrEmpty(modelid))
+                m_modelid = int.Parse(modelid);
 
             if (m_creatureTemplateData.minlevel == 9999 || m_creatureTemplateData.maxlevel == 9999)
             {
@@ -552,6 +557,19 @@ namespace WowHeadParser.Entities
 
                 m_creatureMoneyBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minGold, m_creatureTemplateData.maxGold);
                 returnSql += m_creatureMoneyBuilder.ToString() + "\n";
+            }
+
+            if (IsCheckboxChecked("model") && m_modelid != 0)
+            {
+                SqlBuilder m_creatureModelInfoBuilder = new SqlBuilder("creature_model_info", "DisplayID", SqlQueryType.InsertIgnore);
+                SqlBuilder m_creatureTemplateModelBuilder = new SqlBuilder("creature_template_model", "CreatureID", SqlQueryType.InsertIgnore);
+                m_creatureModelInfoBuilder.SetFieldsNames("BoundingRadius", "CombatReach", "DisplayID_Other_Gender");
+                m_creatureTemplateModelBuilder.SetFieldsNames("Idx", "CreatureDisplayID", "DisplayScale", "Probability");
+
+                m_creatureModelInfoBuilder.AppendFieldsValue(m_modelid, "1", "1", "0");
+                m_creatureTemplateModelBuilder.AppendFieldsValue(m_creatureTemplateData.id, "0", m_modelid, "1", "1");
+                returnSql += m_creatureModelInfoBuilder.ToString() + "\n";
+                returnSql += m_creatureTemplateModelBuilder.ToString() + "\n";
             }
 
             // Locales
