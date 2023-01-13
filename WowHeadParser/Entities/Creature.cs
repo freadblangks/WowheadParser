@@ -727,28 +727,51 @@ namespace WowHeadParser.Entities
                
                 returnSql += "UPDATE creature_template SET npcflag = npcflag | 16 WHERE entry = " + m_creatureTemplateData.id + ";\n";
                 
-                int trainerType = -1;
-                string trainerGreeting = "";
 
-                var data = new Dictionary<int, List<CreatureTrainerParsing>>();
+                var data = new Dictionary<string, List<CreatureTrainerParsing>>();
+
+                var profMap = new Dictionary<int, string>();
                 
                 foreach (CreatureTrainerParsing creatureTrainerData in m_creatureTrainerDatas)
                 {
-
-                    int reqskill = creatureTrainerData.skill.Length > 0 ? creatureTrainerData.skill[0] : 0;
-
-                    if (reqskill > 0)
+                    string trainerGreeting = "";
+                    int skillId = creatureTrainerData.skill[0];
+                    
+                    if (_professionsTrainer.Contains(creatureTrainerData.name))
                     {
-                        if (!data.TryGetValue(reqskill, out var list))
+                        trainerGreeting = creatureTrainerData.name;
+                        profMap[skillId] = trainerGreeting;
+                    }
+
+                    if (_ridingTrainer.Contains(creatureTrainerData.id))
+                    {
+                        trainerGreeting = "Riding";
+                        profMap[skillId] = trainerGreeting;
+                    }
+
+                }
+
+
+                foreach (var creatureTrainerData in m_creatureTrainerDatas)
+                {
+
+                    if (profMap.TryGetValue(creatureTrainerData.skill[0], out var trinerType))
+                    {
+                        if (!data.TryGetValue(trinerType, out var list))
                         {
                             list = new List<CreatureTrainerParsing>();
-                            data.Add(reqskill, list);
+                            data.Add(trinerType, list);
                         }
 
                         list.Add(creatureTrainerData);
                     }
                     else
-                        Console.WriteLine(" m_creatureTemplateData.id: " + m_creatureTemplateData.id + " learnedat: " + creatureTrainerData.learnedat + "creatureTrainerData.skill[0]: " + creatureTrainerData.skill[0]);
+                    {
+                       var list = data.FirstOrDefault().Value;
+
+                        if (list != null)
+                            list.Add(creatureTrainerData);
+                    }
                 }
                 
                 int menu = 0;
@@ -757,6 +780,8 @@ namespace WowHeadParser.Entities
                 {
                     var trainerId = Interlocked.Increment(ref _trainerId);
                     Console.WriteLine("TrainerId: " + trainerId + " m_creatureTemplateData.id: " + m_creatureTemplateData.id + " data: " + data.Count + " kvp.Value.Count: " + kvp.Value.Count);
+                    int trainerType = -1;
+                    string trainerGreeting = "";
                     
                     foreach (CreatureTrainerParsing creatureTrainerData in kvp.Value)
                     {
@@ -773,14 +798,12 @@ namespace WowHeadParser.Entities
                                 trainerGreeting = creatureTrainerData.name;
                             }
 
-
                             if (_ridingTrainer.Contains(creatureTrainerData.id))
                             {
                                 trainerType = 1;
                                 trainerGreeting = "Riding";
                             }
                         }
-
 
                         int reqskill1 = creatureTrainerData.skill.Length > 1 ? creatureTrainerData.skill[1] : 0; // creatureTrainerData.learnedat
                         int reqskill2 = creatureTrainerData.skill.Length > 2 ? creatureTrainerData.skill[2] : 0;

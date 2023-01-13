@@ -2,9 +2,11 @@
  * * Created by Traesh for AshamaneProject (https://github.com/AshamaneProject)
  */
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Net.Http;
+using System.Threading.Tasks;
 using WowHeadParser.Entities;
 using WOWSharp.Community;
 using WOWSharp.Community.Wow;
@@ -13,9 +15,10 @@ namespace WowHeadParser
 {
     class Range
     {
-        static readonly object locker = new object();
         const int MAX_WORKER = 20;
-
+        Queue<string> _sqlQ = new Queue<string>();
+        bool _done = false;
+        
         public Range(MainWindow view, String fileName, String optionName)
         {
             m_view = view;
@@ -55,7 +58,32 @@ namespace WowHeadParser
             m_parsedEntitiesCount = 0;
 
             int maxWorkers = (m_to - m_from + 1) > MAX_WORKER ? MAX_WORKER : m_to - m_from + 1;
+            var task = new Task(() =>
+            {
 
+                Directory.CreateDirectory(Path.GetDirectoryName(m_fileName));
+                using (var sw = new StreamWriter(m_fileName, true))
+                    while (!_done)
+                    {
+
+                        while (_sqlQ.Count > 0)
+                        {
+                            string requestText = null;
+
+                            lock (_sqlQ)
+                            {
+                                if (_sqlQ.Count > 0)
+                                    requestText = _sqlQ.Dequeue();
+                            }
+
+                            if (!string.IsNullOrEmpty(requestText))
+                                sw.WriteLine(requestText);
+                        }
+
+                        System.Threading.Thread.Sleep(100);
+                    }
+            });
+            task.Start();
             for (int i = 0; i < maxWorkers; ++i)
             {
                 m_webClients[i] = Tools.InitHttpClient();
@@ -84,15 +112,9 @@ namespace WowHeadParser
                 if (entity.ParseSingleJson())
                 {
                     String requestText = "\n\n" + entity.GetSQLRequest();
-                    requestText += requestText != "" ? "\n" : "";
-                    if (requestText.Equals("\n\n\n"))
-                        return;
-
-                    lock (locker)
-                    { // AppendAllTexts is not thread safe, by using a lock it will be
-                        Directory.CreateDirectory(Path.GetDirectoryName(m_fileName));
-                        File.AppendAllText(m_fileName, requestText);
-                    }
+                    
+                    lock (_sqlQ)
+                        _sqlQ.Enqueue(requestText);
                 }
             }
             catch (Exception ex)
@@ -120,6 +142,7 @@ namespace WowHeadParser
             if (m_parsedEntitiesCount == m_entityTodoCount)
             {
                 m_view.SetWorkDone();
+                _done = true;
                 return;
             }
 
