@@ -85,8 +85,6 @@ namespace WowHeadParser
 
                         System.Threading.Thread.Sleep(1000);
                     }
-                    
-                    System.Threading.Thread.Sleep(1000);
                 }
 
 
@@ -149,8 +147,8 @@ namespace WowHeadParser
 
             if (m_parsedEntitiesCount == m_entityTodoCount)
             {
-                m_view.SetWorkDone();
                 _done = true;
+                m_view.SetWorkDone();
                 return;
             }
 

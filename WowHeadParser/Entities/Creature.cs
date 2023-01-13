@@ -231,6 +231,9 @@ namespace WowHeadParser.Entities
                     return false;
             }
 
+            if (IsCheckboxChecked("model") && m_modelid != 0)
+                optionSelected = true;
+
             if (IsCheckboxChecked("locale"))
                 optionSelected = true;
 
