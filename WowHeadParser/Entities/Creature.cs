@@ -13,6 +13,7 @@ using WowHeadParser.Models;
 using static WowHeadParser.Entities.Gameobject;
 using WOWSharp.Community.Diablo;
 using WOWSharp.Community.Wow;
+using System.Threading;
 
 namespace WowHeadParser.Entities
 {
@@ -728,48 +729,79 @@ namespace WowHeadParser.Entities
                 
                 int trainerType = -1;
                 string trainerGreeting = "";
+
+                var data = new Dictionary<int, List<CreatureTrainerParsing>>();
+                
                 foreach (CreatureTrainerParsing creatureTrainerData in m_creatureTrainerDatas)
                 {
-                    int reqskill = creatureTrainerData.learnedat > 0 ? creatureTrainerData.skill[0] : 0;
-                    int learndAt = creatureTrainerData.learnedat;
 
-                    if (trainerType == -1)
+                    int reqskill = creatureTrainerData.skill.Length > 0 ? creatureTrainerData.skill[0] : 0;
+
+                    if (reqskill > 0)
                     {
-                        if (_professionsTrainer.Contains(creatureTrainerData.name))
+                        if (!data.TryGetValue(reqskill, out var list))
                         {
-                            trainerType = 2;
-                            reqskill = 0;
-                            learndAt = 0;
-                            trainerGreeting = creatureTrainerData.name;
+                            list = new List<CreatureTrainerParsing>();
+                            data.Add(reqskill, list);
                         }
 
-                        if (_ridingTrainer.Contains(creatureTrainerData.id))
+                        list.Add(creatureTrainerData);
+                    }
+                    else
+                        Console.WriteLine(" m_creatureTemplateData.id: " + m_creatureTemplateData.id + " learnedat: " + creatureTrainerData.learnedat + "creatureTrainerData.skill[0]: " + creatureTrainerData.skill[0]);
+                }
+                
+                int menu = 0;
+                
+                foreach (var kvp in data)
+                {
+                    var trainerId = Interlocked.Increment(ref _trainerId);
+                    Console.WriteLine("TrainerId: " + trainerId + " m_creatureTemplateData.id: " + m_creatureTemplateData.id + " data: " + data.Count + " kvp.Value.Count: " + kvp.Value.Count);
+                    
+                    foreach (CreatureTrainerParsing creatureTrainerData in kvp.Value)
+                    {
+                        int reqskill = creatureTrainerData.skill.Length > 0 ? creatureTrainerData.skill[0] : 0;
+                        int learndAt = creatureTrainerData.learnedat == 9999 ? 0 : creatureTrainerData.learnedat;
+
+                        if (trainerType == -1)
                         {
-                            trainerType = 1;
-                            trainerGreeting = "Riding";
+                            if (_professionsTrainer.Contains(creatureTrainerData.name))
+                            {
+                                trainerType = 2;
+                                reqskill = 0;
+                                learndAt = 0;
+                                trainerGreeting = creatureTrainerData.name;
+                            }
+
+
+                            if (_ridingTrainer.Contains(creatureTrainerData.id))
+                            {
+                                trainerType = 1;
+                                trainerGreeting = "Riding";
+                            }
                         }
+
+
+                        int reqskill1 = creatureTrainerData.skill.Length > 1 ? creatureTrainerData.skill[1] : 0; // creatureTrainerData.learnedat
+                        int reqskill2 = creatureTrainerData.skill.Length > 2 ? creatureTrainerData.skill[2] : 0;
+                        int reqskill3 = creatureTrainerData.skill.Length > 3 ? creatureTrainerData.skill[3] : 0;
+                        m_creatureTrainerBuilder.AppendFieldsValue(trainerId, creatureTrainerData.id, creatureTrainerData.trainingcost, reqskill, learndAt, reqskill1, reqskill2, reqskill3, creatureTrainerData.level);
                     }
                     
+                    if (trainerType == -1)
+                    {
+                        trainerType = 2;
+                        trainerGreeting = "profession training";
+                    }
+
+                    trinerBuilder.AppendFieldsValue(m_creatureTemplateData.id, trainerId, menu, 0);
+                    m_creatureTrainerBaseBuilder.AppendFieldsValue(trainerId, trainerType, $"Greetings! Can I teach you {trainerGreeting}?");
+                    menu++;
                     
-                    int reqskill1 = creatureTrainerData.skill.Length > 1 ? creatureTrainerData.skill[1] : 0; // creatureTrainerData.learnedat
-                    int reqskill2 = creatureTrainerData.skill.Length > 2 ? creatureTrainerData.skill[2] : 0;
-                    int reqskill3 = creatureTrainerData.skill.Length > 3 ? creatureTrainerData.skill[3] : 0;
-                    m_creatureTrainerBuilder.AppendFieldsValue(m_creatureTemplateData.id, creatureTrainerData.id, creatureTrainerData.trainingcost, reqskill, learndAt, reqskill1, reqskill2, reqskill3, creatureTrainerData.level);
+                    returnSql += trinerBuilder.ToString() + "\n";
+                    returnSql += m_creatureTrainerBaseBuilder.ToString() + "\n";
+                    returnSql += m_creatureTrainerBuilder.ToString() + "\n";
                 }
-
-                if (trainerType == -1)
-                {
-                    trainerType = 2;
-                    trainerGreeting = "profession training";
-                }
-
-                trinerBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.id, 0, 0);
-                m_creatureTrainerBaseBuilder.AppendFieldsValue(m_creatureTemplateData.id, trainerType, $"Greetings! Can I teach you {trainerGreeting}?");
-
-                returnSql += trinerBuilder.ToString() + "\n";
-                returnSql += m_creatureTrainerBaseBuilder.ToString() + "\n";
-                returnSql += m_creatureTrainerBuilder.ToString() + "\n";
-
             }
 
             var questInfo = new Dictionary<int, Quest>();
@@ -817,6 +849,7 @@ namespace WowHeadParser.Entities
             return returnSql;
         }
 
+        static int _trainerId = 0;
         private int m_faction;
         private bool m_isBoss;
         private int m_modelid;

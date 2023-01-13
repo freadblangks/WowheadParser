@@ -91,7 +91,7 @@ namespace WowHeadParser
                     lock (locker)
                     { // AppendAllTexts is not thread safe, by using a lock it will be
                         Directory.CreateDirectory(Path.GetDirectoryName(m_fileName));
-                        File.AppendAllText(m_fileName, entity.GetSQLRequest());
+                        File.AppendAllText(m_fileName, requestText);
                     }
                 }
             }
@@ -110,7 +110,7 @@ namespace WowHeadParser
             if (m_parsedEntitiesCount > m_entityTodoCount)
                 return;
 
-            Console.WriteLine("Affected: " + m_parsedEntitiesCount);
+            
 
             if (m_view != null)
             {
