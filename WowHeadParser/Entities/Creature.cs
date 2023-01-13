@@ -761,7 +761,7 @@ namespace WowHeadParser.Entities
                                                                 0, // GroupId
                                                                 creatureSkinningData.stack[0], // MinCount
                                                                 creatureSkinningData.stack[1], // MaxCount
-                                                                ""); // Comment
+                                                                creatureSkinningData.name?.Replace("'", "\\'")); // Comment
                 }
 
                 returnSql += m_creatureSkinningBuilder.ToString() + "\n";
