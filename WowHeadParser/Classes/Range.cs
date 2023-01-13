@@ -63,7 +63,8 @@ namespace WowHeadParser
 
                 Directory.CreateDirectory(Path.GetDirectoryName(m_fileName));
                 using (var sw = new StreamWriter(m_fileName, true))
-                    while (!_done)
+                {
+                    while (!_done || _sqlQ.Count != 0)
                     {
 
                         while (_sqlQ.Count > 0)
@@ -77,11 +78,18 @@ namespace WowHeadParser
                             }
 
                             if (!string.IsNullOrEmpty(requestText))
-                                sw.WriteLine(requestText);
+                                sw.Write(requestText);
+
+                            System.Threading.Thread.Sleep(100);
                         }
 
-                        System.Threading.Thread.Sleep(100);
+                        System.Threading.Thread.Sleep(1000);
                     }
+                    
+                    System.Threading.Thread.Sleep(1000);
+                }
+
+
             });
             task.Start();
             for (int i = 0; i < maxWorkers; ++i)

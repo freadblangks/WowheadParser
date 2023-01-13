@@ -3,30 +3,152 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using CsvHelper;
+using CsvHelper.Configuration;
 using WOWSharp.Community;
 
 namespace WowHeadParser
 {
-    public struct ItemExtendedCostEntry
+
+    public class CurrencyTypes
     {
-        public UInt32 ID;
-        public List<UInt32> RequiredItem;               // required item id
-        public List<UInt32> RequiredCurrencyCount;      // required curency count
-        public List<UInt16> RequiredItemCount;          // required count of 1st item
-        public UInt16 RequiredPersonalArenaRating;      // required personal arena rating
-        public List<UInt16> RequiredCurrency;           // required curency id
-        public Byte RequiredArenaSlot;                  // arena slot restrictions (min slot value)
-        public Byte RequiredFactionId;
-        public Byte RequiredFactionStanding;
-        public Byte RequirementFlags;
-        public Byte RequiredAchievement;
-    };
+        public uint ID { get; set; }
+        public string Name_lang { get; set; }
+        public string Description_lang { get; set; }
+        public int CategoryID { get; set; }
+        public int InventoryIconFileID { get; set; }
+        public int SpellWeight { get; set; }
+        public int SpellCategory { get; set; }
+        public int MaxQty { get; set; }
+        public int MaxEarnablePerWeek { get; set; }
+        public int Quality { get; set; }
+        public int FactionID { get; set; }
+        public int ItemGroupSoundsID { get; set; }
+        public int XpQuestDifficulty { get; set; }
+        public int AwardConditionID { get; set; }
+        public int MaxQtyWorldStateID { get; set; }
+        public int RechargingAmountPerCycle { get; set; }
+        public int RechargingCycleDurationMS { get; set; }
+        public int Flags0 { get; set; }
+        public int Flags1 { get; set; }
+
+        public bool HasPrecision() { return (Flags0 & (int)CurrencyFlags.CURRENCY_FLAG_HIGH_PRECISION) != 0; }
+        public bool HasSeasonCount() { return (Flags0 & (int)CurrencyFlags.CURRENCY_FLAG_HAS_SEASON_COUNT) != 0; }
+        public float GetPrecision() { return HasPrecision() ? 100.0f : 1.0f; }
+    }
+
+    public class CurrencyTypesClassMap : ClassMap<CurrencyTypes>
+    {
+        public CurrencyTypesClassMap()
+        {
+            Map(m => m.ID).Name("ID");
+            Map(m => m.Name_lang).Name("Name_lang");
+            Map(m => m.Description_lang).Name("Description_lang");
+            Map(m => m.CategoryID).Name("CategoryID");
+            Map(m => m.InventoryIconFileID).Name("InventoryIconFileID");
+            Map(m => m.SpellWeight).Name("SpellWeight");
+            Map(m => m.SpellCategory).Name("SpellCategory");
+            Map(m => m.MaxQty).Name("MaxQty");
+            Map(m => m.MaxEarnablePerWeek).Name("MaxEarnablePerWeek");
+            Map(m => m.Quality).Name("Quality");
+            Map(m => m.FactionID).Name("FactionID");
+            Map(m => m.ItemGroupSoundsID).Name("ItemGroupSoundsID");
+            Map(m => m.XpQuestDifficulty).Name("XpQuestDifficulty");
+            Map(m => m.AwardConditionID).Name("AwardConditionID");
+            Map(m => m.MaxQtyWorldStateID).Name("MaxQtyWorldStateID");
+            Map(m => m.RechargingAmountPerCycle).Name("RechargingAmountPerCycle");
+            Map(m => m.RechargingCycleDurationMS).Name("RechargingCycleDurationMS");
+            Map(m => m.Flags0).Name("Flags[0]");
+            Map(m => m.Flags1).Name("Flags[1]");
+        }
+    }
+
+    public class ItemExtendedCostEntry
+    {
+        public uint ID { get; set; }
+        public int RequiredArenaRating { get; set; }
+        public int ArenaBracket { get; set; }
+        public int Flags { get; set; }
+        public int MinFactionID { get; set; }
+        public int MinReputation { get; set; }
+        public int RequiredAchievement { get; set; }
+        public List<uint> ItemID { get; set; }
+        public List<uint> ItemCount { get; set; }
+        public List<uint> CurrencyID{ get; set; }
+        public List<uint> CurrencyCount { get; set; }
+    }
+
+    public class ItemExtendedCostEntryClassMap : ClassMap<ItemExtendedCostEntry>
+    {
+        public ItemExtendedCostEntryClassMap()
+        {
+            Map(m => m.ID).Name("ID");
+            Map(m => m.RequiredArenaRating).Name("RequiredArenaRating");
+            Map(m => m.ArenaBracket).Name("ArenaBracket");
+            Map(m => m.Flags).Name("Flags");
+            Map(m => m.MinFactionID).Name("MinFactionID");
+            Map(m => m.MinReputation).Name("MinReputation");
+            Map(m => m.RequiredAchievement).Name("RequiredAchievement");
+            Map(m => m.ItemID).Convert(item =>
+            {
+                var list = new List<uint>();
+                for (var i = 0; i < 5; i++)
+                {
+                    list.Add(uint.Parse(item.Row.GetField($"ItemID[{i}]")));
+                }
+                return list;
+            });
+            Map(m => m.ItemCount).Convert(item =>
+            {
+                var list = new List<uint>();
+                for (var i = 0; i < 5; i++)
+                {
+                    list.Add(uint.Parse(item.Row.GetField($"ItemCount[{i}]")));
+                }
+                return list;
+            });
+            Map(m => m.CurrencyID).Convert(item =>
+            {
+                var list = new List<uint>();
+                for (var i = 0; i < 5; i++)
+                {
+                    list.Add(uint.Parse(item.Row.GetField($"CurrencyID[{i}]")));
+                }
+                return list;
+            });
+            Map(m => m.CurrencyCount).Convert(item =>
+            {
+                var list = new List<uint>();
+                for (var i = 0; i < 5; i++)
+                {
+                    list.Add(uint.Parse(item.Row.GetField($"CurrencyCount[{i}]")));
+                }
+                return list;
+            });
+        }
+    }
+
+    //public struct ItemExtendedCostEntry
+    //{
+    //    public UInt32 ID;
+    //    public List<UInt32> RequiredItem;               // required item id
+    //    public List<UInt32> RequiredCurrencyCount;      // required curency count
+    //    public List<UInt16> RequiredItemCount;          // required count of 1st item
+    //    public UInt16 RequiredPersonalArenaRating;      // required personal arena rating
+    //    public List<UInt16> RequiredCurrency;           // required curency id
+    //    public Byte RequiredArenaSlot;                  // arena slot restrictions (min slot value)
+    //    public Byte RequiredFactionId;
+    //    public Byte RequiredFactionStanding;
+    //    public Byte RequirementFlags;
+    //    public Byte RequiredAchievement;
+    //};
 
     public struct PlayerConditionEntry
     {
@@ -114,31 +236,6 @@ namespace WowHeadParser
         CURRENCY_FLAG_HIGH_PRECISION        = 0x08,
         CURRENCY_FLAG_ARCHAEOLOGY_FRAGMENT  = 0x20,
         CURRENCY_FLAG_HAS_SEASON_COUNT      = 0x80
-    };
-
-    struct CurrencyTypesEntry
-    {
-        public UInt32 ID;
-        public String Name;
-        public UInt32 MaxQty;
-        public UInt32 MaxEarnablePerWeek;
-        public String Description;
-        public Byte CategoryID;
-        public Byte SpellCategory;
-        public Byte Quality;
-        public UInt32 InventoryIconFileDataID;
-        public UInt32 SpellWeight;
-        public UInt32 FactionID;
-        public Byte ItemGroupSoundsID;
-        public Byte XpQuestDifficulty;
-        public UInt32 AwardConditionID;
-        public UInt32 MaxQtyWorldStateID;
-        public UInt32 Flags0;
-        public UInt32 Flags1;
-
-        public bool HasPrecision()   { return (Flags0 & (int)CurrencyFlags.CURRENCY_FLAG_HIGH_PRECISION) != 0; }
-        public bool HasSeasonCount() { return (Flags0 & (int)CurrencyFlags.CURRENCY_FLAG_HAS_SEASON_COUNT) != 0; }
-        public float GetPrecision()  { return HasPrecision() ? 100.0f : 1.0f; }
     };
 
     public enum UnitClass
@@ -360,103 +457,42 @@ namespace WowHeadParser
 
         public static void LoadCurrencyTemplatesCSV()
         {
-            if (m_currencyTemplate != null)
-                return;
-
-            m_currencyTemplate = new Dictionary<UInt32, CurrencyTypesEntry>();
-
-            List<String> allLines = new List<String>(File.ReadAllLines("Ressources/CurrencyTypes.db2.csv"));
-
-            allLines.RemoveAt(0);
-
-            foreach (String line in allLines)
+            lock (m_currencyTemplate)
             {
-                try
+                if (m_currencyTemplate.Count > 0)
+                    return;
+
+                using (var reader = new StreamReader("Ressources/CurrencyTypes.db2.csv"))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
                 {
-                    CurrencyTypesEntry currencyTemplate = new CurrencyTypesEntry();
-                    string[] values =  Regex.Split(line, "[,]{1}(?=(?:[^\"]*\"[^\"]*\")*(?![^\"]*\"))"); // account for lines with commas in the quoted text
+                    csv.Context.RegisterClassMap<CurrencyTypesClassMap>();
+                    var records = csv.GetRecords<CurrencyTypes>();
 
-                    if (values.Length < 2)
-                        values = line.Split(',');
-
-                    if (values.Length < 16)
-                        continue;
-
-                    int index = 0;
-                    currencyTemplate.ID = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.Name = values[index++];
-                    currencyTemplate.Description = values[index++];
-                    currencyTemplate.CategoryID = Convert.ToByte(values[index++]);
-                    currencyTemplate.InventoryIconFileDataID = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.SpellWeight = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.SpellCategory = Convert.ToByte(values[index++]);
-                    currencyTemplate.MaxQty = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.MaxEarnablePerWeek = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.Quality = Convert.ToByte(values[index++]);
-                    currencyTemplate.FactionID = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.ItemGroupSoundsID = Convert.ToByte(values[index++]);
-                    currencyTemplate.XpQuestDifficulty = Convert.ToByte(values[index++]);
-                    currencyTemplate.AwardConditionID = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.MaxQtyWorldStateID = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.Flags0 = Convert.ToUInt32(values[index++]);
-                    currencyTemplate.Flags1 = Convert.ToUInt32(values[index++]);
-
-                    m_currencyTemplate.Add(currencyTemplate.ID, currencyTemplate);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
+                    foreach (CurrencyTypes line in records)
+                    {
+                        m_currencyTemplate.Add(line.ID, line);
+                    }
                 }
             }
         }
 
         public static void LoadItemExtendedCostDb2CSV()
         {
-            if (m_itemExtendedCost != null)
-                return;
-
-            m_itemExtendedCost = new List<ItemExtendedCostEntry>();
-
-            List<String> allLines = new List<String>(File.ReadAllLines("Ressources/ItemExtendedCost.db2.csv"));
-
-            allLines.RemoveAt(0);
-
-            foreach (String line in allLines)
+            lock (m_itemExtendedCost)
             {
-                ItemExtendedCostEntry extendedCost = new ItemExtendedCostEntry();
-                String[] values = line.Split(',');
-                List<UInt32> intValues = new List<UInt32>();
+                if (m_itemExtendedCost.Count > 0)
+                    return;
 
-                foreach (String value in values)
-                    intValues.Add(Convert.ToUInt32(value));
-
-                extendedCost.RequiredItem                   = new List<UInt32>();
-                extendedCost.RequiredItemCount              = new List<UInt16>();
-                extendedCost.RequiredCurrency               = new List<UInt16>();
-                extendedCost.RequiredCurrencyCount          = new List<UInt32>();
-
-                extendedCost.ID                             = intValues[0];
-                extendedCost.RequiredPersonalArenaRating    = (UInt16)intValues[1];
-                extendedCost.RequiredArenaSlot              = (byte)intValues[2];
-                extendedCost.RequirementFlags               = (byte)intValues[3];
-                extendedCost.RequiredFactionId              = (byte)intValues[4];
-                extendedCost.RequiredFactionStanding        = (byte)intValues[5];
-                extendedCost.RequiredAchievement            = (byte)intValues[6];
-
-
-                for (int i = 0; i < 5; ++i)
-                    extendedCost.RequiredItem.Add(intValues[7 + i]);
-
-                for (int i = 0; i < 5; ++i)
-                    extendedCost.RequiredItemCount.Add((UInt16)intValues[12 + i]);
-
-                for (int i = 0; i < 5; ++i)
-                    extendedCost.RequiredCurrency.Add((UInt16)intValues[17 + i]);
-
-                for (int i = 0; i < 5; ++i)
-                    extendedCost.RequiredCurrencyCount.Add(intValues[22 + i]);
-
-                m_itemExtendedCost.Add(extendedCost);
+                using (var reader = new StreamReader("Ressources/ItemExtendedCost.db2.csv"))
+                using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                {
+                    csv.Context.RegisterClassMap<ItemExtendedCostEntryClassMap>();
+                    var records = csv.GetRecords<ItemExtendedCostEntry>();
+                    foreach (var extendedCost in records)
+                    {
+                        m_itemExtendedCost.Add(extendedCost);
+                    }
+                }
             }
         }
 
@@ -483,13 +519,13 @@ namespace WowHeadParser
                     if (itemId.Count < (i + 1))
                         break;
 
-                    if (extendedCostEntry.RequiredItem[i] != itemId[i])
+                    if (extendedCostEntry.ItemID[i] != itemId[i])
                     {
                         notMatch = true;
                         break;
                     }
 
-                    if (extendedCostEntry.RequiredItemCount[i] != itemCount[i])
+                    if (extendedCostEntry.ItemCount[i] != itemCount[i])
                     {
                         notMatch = true;
                         break;
@@ -504,17 +540,21 @@ namespace WowHeadParser
                     if (currencyId.Count < (i + 1))
                         break;
 
-                    if (extendedCostEntry.RequiredCurrency[i] != currencyId[i])
+                    if (extendedCostEntry.CurrencyID[i] != currencyId[i])
                     {
                         notMatch = true;
                         break;
                     }
+                    var currId = extendedCostEntry.CurrencyCount[i];
 
-                    int precision = (int)m_currencyTemplate[extendedCostEntry.RequiredCurrency[i]].GetPrecision();
-                    if (extendedCostEntry.RequiredCurrencyCount[i] != (currencyCount[i] * precision))
+                    if (m_currencyTemplate.TryGetValue(currId, out var currencyTypes))
                     {
-                        notMatch = true;
-                        break;
+                        int precision = (int)currencyTypes.GetPrecision();
+                        if (extendedCostEntry.CurrencyCount[i] != (currencyCount[i] * precision))
+                        {
+                            notMatch = true;
+                            break;
+                        }
                     }
                 }
 
@@ -527,29 +567,30 @@ namespace WowHeadParser
 
         public static void LoadPlayerConditionDb2CSV()
         {
-            if (m_playerConditions != null)
-                return;
-
-            m_playerConditions = new List<PlayerConditionEntry>();
-
-            List<String> allLines = new List<String>(File.ReadAllLines("Ressources/PlayerCondition.db2.csv"));
-
-            allLines.RemoveAt(0);
-
-            foreach (String line in allLines)
+            lock (m_playerConditions)
             {
-                PlayerConditionEntry playerCondition = new PlayerConditionEntry();
-                String[] values = line.Split(',');
+                if (m_playerConditions.Count > 0)
+                    return;
 
-                playerCondition.PrevQuestID = new List<Int32>();
+                List<String> allLines = new List<String>(File.ReadAllLines("Ressources/PlayerCondition.db2.csv"));
 
-                playerCondition.ID              = Convert.ToInt32(values[0]);
-                playerCondition.PrevQuestLogic  = Convert.ToInt32(values[13]);
+                allLines.RemoveAt(0);
 
-                for (int i = 0; i < 4; ++i)
-                    playerCondition.PrevQuestID.Add(Convert.ToInt32(values[75 + i]));
+                foreach (String line in allLines)
+                {
+                    PlayerConditionEntry playerCondition = new PlayerConditionEntry();
+                    String[] values = line.Split(',');
 
-                m_playerConditions.Add(playerCondition);
+                    playerCondition.PrevQuestID = new List<Int32>();
+
+                    playerCondition.ID = Convert.ToInt32(values[0]);
+                    playerCondition.PrevQuestLogic = Convert.ToInt32(values[13]);
+
+                    for (int i = 0; i < 4; ++i)
+                        playerCondition.PrevQuestID.Add(Convert.ToInt32(values[75 + i]));
+
+                    m_playerConditions.Add(playerCondition);
+                }
             }
         }
 
@@ -632,9 +673,9 @@ namespace WowHeadParser
             return NormalizeFloat(currentHealth / baseHp, 1);
         }
 
-        private static List<ItemExtendedCostEntry> m_itemExtendedCost = null;
-        private static List<PlayerConditionEntry> m_playerConditions = null;
-        private static Dictionary<UInt32, CurrencyTypesEntry> m_currencyTemplate = null;
+        private static List<ItemExtendedCostEntry> m_itemExtendedCost = new List<ItemExtendedCostEntry>();
+        private static List<PlayerConditionEntry> m_playerConditions = new List<PlayerConditionEntry>();
+        private static Dictionary<UInt32, CurrencyTypes> m_currencyTemplate = new Dictionary<uint, CurrencyTypes>();
         //                        Exp             Level           Class
         private static Dictionary<int, Dictionary<int, Dictionary<int, float>>> m_baseHpForLevelAndClass;
     }

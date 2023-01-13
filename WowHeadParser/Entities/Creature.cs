@@ -59,8 +59,8 @@ namespace WowHeadParser.Entities
         public int[] stack;
         public dynamic cost;
 
-        public int integerCost;
-        public int integerExtendedCost;
+        public ulong integerCost;
+        public uint integerExtendedCost;
         public int incrTime;
     }
 
@@ -81,6 +81,35 @@ namespace WowHeadParser.Entities
         public int count;
         public int[] bonustrees;
     }
+
+    public class Class1
+    {
+        public int classs { get; set; }
+        public int flags2 { get; set; }
+        public int id { get; set; }
+        public int level { get; set; }
+        public string name { get; set; }
+        public int quality { get; set; }
+        public int slot { get; set; }
+        public int[] source { get; set; }
+        public Sourcemore[] sourcemore { get; set; }
+        public int subclass { get; set; }
+        public int count { get; set; }
+        public int[] stack { get; set; }
+        public Pctstack pctstack { get; set; }
+        public int outof { get; set; }
+    }
+
+    public class Pctstack
+    {
+        public float _1 { get; set; }
+        public float _2 { get; set; }
+        public float _3 { get; set; }
+        public float _4 { get; set; }
+        public float _5 { get; set; }
+        public float _6 { get; set; }
+    }
+    
 
     class CreatureLootCurrencyParsing : CreatureLootParsing
     {
@@ -341,7 +370,7 @@ namespace WowHeadParser.Entities
 
                 try
                 {
-                    int cost = Convert.ToInt32(npcVendorDatas[i].cost[0]);
+                    ulong cost = Convert.ToUInt64(npcVendorDatas[i].cost[0]);
                     npcVendorDatas[i].integerCost = cost;
 
                     List<Int32> itemId = new List<Int32>();
@@ -364,7 +393,7 @@ namespace WowHeadParser.Entities
                             currencyCount.Add(Convert.ToInt32(currencyCost[1]));
                         }
 
-                    npcVendorDatas[i].integerExtendedCost = (int)Tools.GetExtendedCostId(itemId, itemCount, currencyId, currencyCount);
+                    npcVendorDatas[i].integerExtendedCost = (uint)Tools.GetExtendedCostId(itemId, itemCount, currencyId, currencyCount);
                 }
                 catch (Exception ex)
                 {
@@ -574,6 +603,7 @@ namespace WowHeadParser.Entities
                 foreach (NpcVendorParsing npcVendorData in m_npcVendorDatas)
                     m_npcVendorBuilder.AppendFieldsValue(m_creatureTemplateData.id, npcVendorData.slot, npcVendorData.id, npcVendorData.avail, npcVendorData.incrTime, npcVendorData.integerExtendedCost, 1, 0);
 
+                returnSql += "UPDATE creature_template SET npcflag = npcflag | 128 WHERE entry = " + m_creatureTemplateData.id + ";\n";
                 returnSql += m_npcVendorBuilder.ToString() + "\n";
             }
 
@@ -724,19 +754,19 @@ namespace WowHeadParser.Entities
                 trinerBuilder.SetFieldsNames("TrainerID", "MenuID", "OptionID");
                 m_creatureTrainerBuilder = new SqlBuilder("trainer_spell", "TrainerId", SqlQueryType.DeleteInsert);
                 m_creatureTrainerBuilder.SetFieldsNames("SpellID", "MoneyCost", "ReqSkillLine", "ReqSkillRank", "ReqAbility1", "ReqAbility2", "ReqAbility3", "ReqLevel");
-               
+
                 returnSql += "UPDATE creature_template SET npcflag = npcflag | 16 WHERE entry = " + m_creatureTemplateData.id + ";\n";
-                
+
 
                 var data = new Dictionary<string, List<CreatureTrainerParsing>>();
 
                 var profMap = new Dictionary<int, string>();
-                
+
                 foreach (CreatureTrainerParsing creatureTrainerData in m_creatureTrainerDatas)
                 {
                     string trainerGreeting = "";
                     int skillId = creatureTrainerData.skill[0];
-                    
+
                     if (_professionsTrainer.Contains(creatureTrainerData.name))
                     {
                         trainerGreeting = creatureTrainerData.name;
@@ -767,22 +797,22 @@ namespace WowHeadParser.Entities
                     }
                     else
                     {
-                       var list = data.FirstOrDefault().Value;
+                        var list = data.FirstOrDefault().Value;
 
                         if (list != null)
                             list.Add(creatureTrainerData);
                     }
                 }
-                
+
                 int menu = 0;
-                
+
                 foreach (var kvp in data)
                 {
                     var trainerId = Interlocked.Increment(ref _trainerId);
                     Console.WriteLine("TrainerId: " + trainerId + " m_creatureTemplateData.id: " + m_creatureTemplateData.id + " data: " + data.Count + " kvp.Value.Count: " + kvp.Value.Count);
                     int trainerType = -1;
                     string trainerGreeting = "";
-                    
+
                     foreach (CreatureTrainerParsing creatureTrainerData in kvp.Value)
                     {
                         int reqskill = creatureTrainerData.skill.Length > 0 ? creatureTrainerData.skill[0] : 0;
@@ -810,7 +840,7 @@ namespace WowHeadParser.Entities
                         int reqskill3 = creatureTrainerData.skill.Length > 3 ? creatureTrainerData.skill[3] : 0;
                         m_creatureTrainerBuilder.AppendFieldsValue(trainerId, creatureTrainerData.id, creatureTrainerData.trainingcost, reqskill, learndAt, reqskill1, reqskill2, reqskill3, creatureTrainerData.level);
                     }
-                    
+
                     if (trainerType == -1)
                     {
                         trainerType = 2;
@@ -820,7 +850,7 @@ namespace WowHeadParser.Entities
                     trinerBuilder.AppendFieldsValue(m_creatureTemplateData.id, trainerId, menu, 0);
                     m_creatureTrainerBaseBuilder.AppendFieldsValue(trainerId, trainerType, $"Greetings! Can I teach you {trainerGreeting}?");
                     menu++;
-                    
+
                     returnSql += trinerBuilder.ToString() + "\n";
                     returnSql += m_creatureTrainerBaseBuilder.ToString() + "\n";
                     returnSql += m_creatureTrainerBuilder.ToString() + "\n";
