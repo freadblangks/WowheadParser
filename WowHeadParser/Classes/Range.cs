@@ -79,12 +79,13 @@ namespace WowHeadParser
 
                             if (!string.IsNullOrEmpty(requestText))
                                 sw.Write(requestText);
-
-                            System.Threading.Thread.Sleep(100);
                         }
 
                         System.Threading.Thread.Sleep(1000);
                     }
+
+
+                    System.Threading.Thread.Sleep(1000);
                 }
 
 
