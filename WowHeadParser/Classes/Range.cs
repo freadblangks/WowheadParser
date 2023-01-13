@@ -81,6 +81,7 @@ namespace WowHeadParser
                                 sw.Write(requestText);
                         }
 
+                        sw.Flush();
                         System.Threading.Thread.Sleep(1000);
                     }
 
