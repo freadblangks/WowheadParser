@@ -108,7 +108,7 @@ namespace WowHeadParser
         {
             Boolean success = false;
             setProgressBar(0);
-            if (comboBoxEntity.SelectedIndex == 0 || comboBoxEntity.SelectedIndex == 5)
+            if (comboBoxEntity.SelectedIndex == 0)
             {
                 System.Windows.Forms.MessageBox.Show("Not implemented.", "Error!");
                 return success;
@@ -134,7 +134,7 @@ namespace WowHeadParser
                     success = range.StartParsing(firstId, lastId);
 
                     break;
-                }
+                    }
                 case 2:
                 {
                     Zone zone = new Zone(this, m_optionName);
@@ -279,6 +279,7 @@ namespace WowHeadParser
                     leftListView.Items.Add("money");
                     leftListView.Items.Add("simple faction");
                     leftListView.Items.Add("template");
+                    leftListView.Items.Add("model");
                     rightDataGroup.Text = "Extra";
                     rightListView.Items.Add("loot");
                     rightListView.Items.Add("quest starter");

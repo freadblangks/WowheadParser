@@ -70,7 +70,7 @@ namespace WowHeadParser.Entities
                 m_data.id = id;
 
             bool optionSelected = false;
-            String itemHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl());
+            String itemHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             String dataPattern = @"\$\.extend\(g_items\[" + m_data.id + @"\], (.+)\);";
 
@@ -140,6 +140,9 @@ namespace WowHeadParser.Entities
                 }
             }
 
+            String itemTeachesPattern = @"new Listview\(\{\n* *template: 'npc',\n* *id: 'dropped-by',\n* *name: WH.TERMS.droppedby,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *hiddenCols: \['type'\],\n* *extraCols: \[Listview.extraCols.count, Listview.extraCols.percent, Listview.extraCols.popularity\],\n* *sort: \['-percent', '-count', 'name'\],\n* *computeDataFunc: Listview.funcBox.initLootTable,\n* *data: (.+),\n\}\);";
+
+
             if (optionSelected)
                 return true;
             else
@@ -204,16 +207,17 @@ namespace WowHeadParser.Entities
                 m_spellLootTemplateBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
 
                 foreach (ItemCreateItemParsing itemLootData in m_itemCreateItemDatas)
-                    m_spellLootTemplateBuilder.AppendFieldsValue(m_itemSpellDatas[0].id, // Entry
-                                                                 itemLootData.id, // Item
-                                                                 0, // ReferenceitemLootData
-                                                                 "100", // Chance
-                                                                 0, // QuestRequired
-                                                                 1, // LootMode
-                                                                 0, // GroupId
-                                                                 "1", // MinCount
-                                                                 "1", // MaxCount
-                                                                 ""); // Comment
+                    if (m_itemSpellDatas != null && m_itemSpellDatas.Length > 0)
+                        m_spellLootTemplateBuilder.AppendFieldsValue(m_itemSpellDatas[0].id, // Entry
+                                                                     itemLootData.id, // Item
+                                                                     0, // ReferenceitemLootData
+                                                                     "100", // Chance
+                                                                     0, // QuestRequired
+                                                                     1, // LootMode
+                                                                     0, // GroupId
+                                                                     "1", // MinCount
+                                                                     "1", // MaxCount
+                                                                     ""); // Comment
 
                 returnSql += m_spellLootTemplateBuilder.ToString() + "\n";
             }
@@ -225,8 +229,8 @@ namespace WowHeadParser.Entities
 
                 foreach (ItemLootTemplateParsing itemLootData in m_itemLootTemplateDatas)
                 {
-                    String percent = ((float)itemLootData.count / (float)m_lootMaxCount * 100).ToString().Replace(",", ".");
-
+                    String percent = Tools.NormalizeFloat((float)itemLootData.count / (float)m_lootMaxCount * 100, m_itemLootTemplateDatas.Length);
+                    
                     int minLootCount = itemLootData.stack.Length >= 1 ? itemLootData.stack[0] : 1;
                     int maxLootCount = itemLootData.stack.Length >= 2 ? itemLootData.stack[1] : minLootCount;
 
@@ -267,7 +271,7 @@ namespace WowHeadParser.Entities
                 foreach (ItemDroppedByTemplateParsing itemDroppedByData in m_itemDroppedByDatas)
                 {
                     float percent = ((float)itemDroppedByData.count / (float)itemDroppedByData.outof) * 100.0f;
-                    String percentStr = Tools.NormalizeFloat(percent);
+                    String percentStr = Tools.NormalizeFloat(percent, m_itemDroppedByDatas.Length);
 
                     switch (GetVersion())
                     {

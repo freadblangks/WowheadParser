@@ -5,6 +5,8 @@ using Newtonsoft.Json;
 using Sql;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using WowHeadParser.Models;
 using static WowHeadParser.MainWindow;
 
 namespace WowHeadParser.Entities
@@ -26,6 +28,8 @@ namespace WowHeadParser.Entities
 
             public string percent;
             public string questRequired;
+            public Modes ModesObj;
+            public string name;
         }
 
         public class GameObjectLootItemParsing : GameObjectLootParsing
@@ -82,7 +86,7 @@ namespace WowHeadParser.Entities
                 m_data.id = id;
 
             bool optionSelected = false;
-            String gameobjectHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl());
+            String gameobjectHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             String gameobjectDataPattern = @"\$\.extend\(g_objects\[" + m_data.id + @"\], (.+)\);";
 
@@ -104,8 +108,8 @@ namespace WowHeadParser.Entities
                 String gameobjectLootCurrencyJSon = Tools.ExtractJsonFromWithPattern(gameobjectHtml, gameobjectLootCurrencyPattern);
                 if (gameobjectLootItemJSon != null || gameobjectLootCurrencyJSon != null)
                 {
-                    GameObjectLootItemParsing[] gameobjectLootItemDatas = gameobjectLootItemJSon != null ? JsonConvert.DeserializeObject<GameObjectLootItemParsing[]>(gameobjectLootItemJSon) : new GameObjectLootItemParsing[0];
-                    GameObjectLootCurrencyParsing[] gameobjectLootCurrencyDatas = gameobjectLootCurrencyJSon != null ? JsonConvert.DeserializeObject<GameObjectLootCurrencyParsing[]>(gameobjectLootCurrencyJSon) : new GameObjectLootCurrencyParsing[0];
+                    ObjectContains[] gameobjectLootItemDatas = gameobjectLootItemJSon != null ? JsonConvert.DeserializeObject<ObjectContains[]>(gameobjectLootItemJSon, Converter.SettingsDropConverter) : new ObjectContains[0];
+                    ObjectContainsCurrency[] gameobjectLootCurrencyDatas = gameobjectLootCurrencyJSon != null ? JsonConvert.DeserializeObject<ObjectContainsCurrency[]>(gameobjectLootCurrencyJSon) : new ObjectContainsCurrency[0];
                     SetGameobjectLootData(gameobjectLootItemDatas, gameobjectLootCurrencyDatas);
                     optionSelected = true;
                 }
@@ -120,7 +124,7 @@ namespace WowHeadParser.Entities
                 if (gameobjectHerbalismJSon != null)
                 {
                     GameObjectLootParsing[] gameobjectHerbalismDatas = JsonConvert.DeserializeObject<GameObjectLootParsing[]>(gameobjectHerbalismJSon);
-                    SetGameobjectHerbalismOrMiningData(gameobjectHerbalismDatas, Int32.Parse(gameobjectHerbalismTotalCount), true);
+                    SetGameobjectHerbalismOrMiningData(gameobjectHerbalismDatas, Int32.Parse(gameobjectHerbalismTotalCount), true, gameobjectHerbalismDatas.Length);
                     optionSelected = true;
                 }
             }
@@ -134,7 +138,7 @@ namespace WowHeadParser.Entities
                 if (gameobjectMiningJSon != null)
                 {
                     GameObjectLootParsing[] gameobjectMiningDatas = JsonConvert.DeserializeObject<GameObjectLootParsing[]>(gameobjectMiningJSon);
-                    SetGameobjectHerbalismOrMiningData(gameobjectMiningDatas, Int32.Parse(gameobjectMiningTotalCount), false);
+                    SetGameobjectHerbalismOrMiningData(gameobjectMiningDatas, Int32.Parse(gameobjectMiningTotalCount), false, gameobjectMiningDatas.Length);
                     optionSelected = true;
                 }
             }
@@ -145,57 +149,45 @@ namespace WowHeadParser.Entities
                 return false;
         }
 
-        public void SetGameobjectLootData(GameObjectLootItemParsing[] gameobjectLootItemDatas, GameObjectLootCurrencyParsing[] gameobjectLootCurrencyDatas)
+        public void SetGameobjectLootData(ObjectContains[] gameobjectLootItemDatas, ObjectContainsCurrency[] gameobjectLootCurrencyDatas)
         {
-            GameObjectLootParsing[] gameobjectLootDatas = new GameObjectLootParsing[gameobjectLootItemDatas.Length + gameobjectLootCurrencyDatas.Length];
-            Array.Copy(gameobjectLootItemDatas, gameobjectLootDatas, gameobjectLootItemDatas.Length);
-            Array.Copy(gameobjectLootCurrencyDatas, 0, gameobjectLootDatas, gameobjectLootItemDatas.Length, gameobjectLootCurrencyDatas.Length);
-
-            List<String> modes = new List<String>() { "1", "2", "4", "33554432" };
-
-            for (uint i = 0; i < gameobjectLootDatas.Length; ++i)
+            var deltaList = new List<GameObjectLootParsing>();
+            foreach (ObjectContains gameobjectLootItemData in gameobjectLootItemDatas)
             {
-                float count = 0.0f;
-                float outof = 0.0f;
-                float percent = 0.0f;
-
-                foreach (String mode in modes)
+                deltaList.Add(new GameObjectLootParsing()
                 {
-                    try
-                    {
-                        count = (float)Convert.ToDouble(gameobjectLootDatas[i].modes[mode]["count"]);
-                        outof = (float)Convert.ToDouble(gameobjectLootDatas[i].modes[mode]["outof"]);
-                        percent = count * 100 / outof;
-                    }
-                    catch (Exception) { }
-                }
-
-                GameObjectLootItemParsing currentItemParsing = null;
-                try
-                {
-                    currentItemParsing = (GameObjectLootItemParsing)gameobjectLootDatas[i];
-                }
-                catch (Exception) { }
-
-                gameobjectLootDatas[i].questRequired = currentItemParsing != null && currentItemParsing.classs == 12 ? "1": "0";
-
-                // Normalize
-                if (percent > 99.0f)
-                    percent = 100.0f;
-
-                gameobjectLootDatas[i].percent = Tools.NormalizeFloat(percent);
+                    count = gameobjectLootItemData.count,
+                    id = gameobjectLootItemData.id,
+                    questRequired = gameobjectLootItemData.classs == 12 ? "1" : "0",
+                    stack = gameobjectLootItemData.stack,
+                    ModesObj = gameobjectLootItemData.modes,
+                    name = gameobjectLootItemData.name,
+                });
             }
 
-            m_gameobjectLootDatas = gameobjectLootDatas;
+            foreach (ObjectContainsCurrency gameobjectLootItemData in gameobjectLootCurrencyDatas)
+            {
+
+                deltaList.Add(new GameObjectLootParsing()
+                {
+                    count = gameobjectLootItemData.count,
+                    id = gameobjectLootItemData.id,
+                    questRequired = "0",
+                    stack = gameobjectLootItemData.stack,
+                    ModesObj = gameobjectLootItemData.modes
+                });
+            }
+
+            m_gameobjectLootDatas = deltaList.ToArray();
         }
 
-        public void SetGameobjectHerbalismOrMiningData(GameObjectLootParsing[] gameobjectHerbalismOrMiningDatas, int totalCount, bool herbalism)
+        public void SetGameobjectHerbalismOrMiningData(GameObjectLootParsing[] gameobjectHerbalismOrMiningDatas, int totalCount, bool herbalism, int num)
         {
             for (uint i = 0; i < gameobjectHerbalismOrMiningDatas.Length; ++i)
             {
                 float percent = (float)gameobjectHerbalismOrMiningDatas[i].count * 100 / (float)totalCount;
 
-                gameobjectHerbalismOrMiningDatas[i].percent = Tools.NormalizeFloat(percent);
+                gameobjectHerbalismOrMiningDatas[i].percent = Tools.NormalizeFloat(percent, num);
             }
 
             if (herbalism)
@@ -242,12 +234,10 @@ namespace WowHeadParser.Entities
                 foreach (GameObjectLootParsing gameobjectLootData in m_gameobjectLootDatas)
                 {
                     GameObjectLootCurrencyParsing currentLootCurrencyData = null;
-                    try
-                    {
-                        currentLootCurrencyData = (GameObjectLootCurrencyParsing)gameobjectLootData;
-                    }
-                    catch (Exception ex) { }
-
+          
+                    if (gameobjectLootData is GameObjectLootCurrencyParsing golip)
+                        currentLootCurrencyData = golip;
+    
                     int idMultiplier = currentLootCurrencyData != null ? -1 : 1;
 
                     if (idMultiplier < 1)
@@ -255,18 +245,40 @@ namespace WowHeadParser.Entities
 
                     int minLootCount = gameobjectLootData.stack.Length >= 1 ? gameobjectLootData.stack[0] : 1;
                     int maxLootCount = gameobjectLootData.stack.Length >= 2 ? gameobjectLootData.stack[1] : minLootCount;
+                    if (gameobjectLootData.ModesObj.ModeMap == null)
+                        continue;
+
+                    int lootMode = 1;
+                    int lootMask = 1;
+                    foreach (var modeId in gameobjectLootData.ModesObj.mode)
+                    {
+                        lootMode = lootMode * 2;
+                        lootMask |= lootMode;
+                    }
 
 
-                    m_gameobjectLootBuilder.AppendFieldsValue(  m_data.id, // Entry
-                                                                gameobjectLootData.id * idMultiplier, // Item
-                                                                0, // Reference
-                                                                gameobjectLootData.percent, // Chance
-                                                                gameobjectLootData.questRequired, // QuestRequired
-                                                                1, // LootMode
-                                                                0, // GroupId
-                                                                minLootCount, // MinCount
-                                                                maxLootCount, // MaxCount
-                                                                ""); // Comment
+                    if (gameobjectLootData.ModesObj.ModeMap.TryGetValue("0", out var mode))
+                    {
+
+                        var chance = Tools.NormalizeFloat(mode.Percent, m_gameobjectLootDatas.Length);
+
+                        if (gameobjectLootData.questRequired == "1")
+                            chance = "100";
+                        
+                        m_gameobjectLootBuilder.AppendFieldsValue(m_data.id, // Entry
+                                                                    gameobjectLootData.id * idMultiplier, // Item
+                                                                    0, // Reference
+                                                                    chance, // Chance
+                                                                    gameobjectLootData.questRequired, // QuestRequired
+                                                                    lootMask, // LootMode
+                                                                    0, // GroupId
+                                                                    minLootCount, // MinCount
+                                                                    maxLootCount, // MaxCount
+                                                                    gameobjectLootData.name.Replace("'", "\\'")); // Comment
+
+                    }
+
+                    
                 }
 
                 returnSql += m_gameobjectLootBuilder.ToString() + "\n";
