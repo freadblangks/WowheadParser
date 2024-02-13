@@ -41,7 +41,7 @@ namespace WowHeadParser.Entities
 
             m_builderSerieWithPrevious = new SqlBuilder("quest_template_addon", "id");
             m_builderSerieWithPrevious.SetFieldsNames("PrevQuestID", "NextQuestID", "ExclusiveGroup", "RequiredMinRepFaction", "RequiredMaxRepFaction", "RequiredMinRepValue", "RequiredMaxRepValue", "ProvidedItemCount");
-            
+
 
             m_builderRequiredTeam = new SqlBuilder("quest_template", "id", SqlQueryType.Update);
 

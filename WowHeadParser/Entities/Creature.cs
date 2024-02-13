@@ -109,7 +109,7 @@ namespace WowHeadParser.Entities
         public float _5 { get; set; }
         public float _6 { get; set; }
     }
-    
+
 
     class CreatureLootCurrencyParsing : CreatureLootParsing
     {
@@ -215,7 +215,7 @@ namespace WowHeadParser.Entities
             String creatureHealthPattern = @"<div>(?:Health|Vie): ((?:\d|,|\.)+)</div>";
             String creatureMoneyPattern = @"\[money=([0-9]+)\]";
             String creatureModelIdPattern = @"WH\.Wow\.ModelViewer\.showLightbox\({&quot;type&quot;:[0-9]+,&quot;typeId&quot;:" + m_creatureTemplateData.id + @",&quot;displayId&quot;:([0-9]+)}\)";
-            
+
             String creatureTemplateDataJSon = Tools.ExtractJsonFromWithPattern(creatureHtml, dataPattern);
             if (creatureTemplateDataJSon != null)
             {
@@ -640,7 +640,7 @@ namespace WowHeadParser.Entities
                 m_creatureReferenceLootBuilder = new SqlBuilder("reference_loot_template", "entry", SqlQueryType.DeleteInsert);
                 m_creatureReferenceLootBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
 
-                returnSql += "UPDATE creature_template SET lootid = " + templateEntry + " WHERE entry = " + templateEntry + " AND lootid = 0;\n";
+                returnSql += "UPDATE creature_template_difficulty SET lootid = " + templateEntry + " WHERE entry = " + templateEntry + " AND lootid = 0;\n";
                 foreach (CreatureLootParsing creatureLootData in m_creatureLootDatas)
                 {
                     List<int> entryList = new List<int>();
@@ -749,7 +749,7 @@ namespace WowHeadParser.Entities
                 m_creatureSkinningBuilder = new SqlBuilder("skinning_loot_template", "entry", SqlQueryType.DeleteInsert);
                 m_creatureSkinningBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
 
-                returnSql += "UPDATE creature_template SET skinloot = " + m_creatureTemplateData.id + " WHERE entry = " + m_creatureTemplateData.id + " AND skinloot = 0;\n";
+                returnSql += "UPDATE creature_template_difficulty SET skinlootid = " + m_creatureTemplateData.id + " WHERE entry = " + m_creatureTemplateData.id + " AND skinlootid = 0;\n";
                 foreach (CreatureLootParsing creatureSkinningData in m_creatureSkinningDatas)
                 {
                     m_creatureSkinningBuilder.AppendFieldsValue(m_creatureTemplateData.id, // Entry
