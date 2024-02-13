@@ -230,7 +230,7 @@ namespace WowHeadParser.Entities
                 foreach (ItemLootTemplateParsing itemLootData in m_itemLootTemplateDatas)
                 {
                     String percent = Tools.NormalizeFloat((float)itemLootData.count / (float)m_lootMaxCount * 100, m_itemLootTemplateDatas.Length);
-                    
+
                     int minLootCount = itemLootData.stack.Length >= 1 ? itemLootData.stack[0] : 1;
                     int maxLootCount = itemLootData.stack.Length >= 2 ? itemLootData.stack[1] : minLootCount;
 
@@ -257,7 +257,7 @@ namespace WowHeadParser.Entities
                 {
                     case "9.2.0.42560":
                     {
-                        m_itemDroppedByBuilder.SetFieldsNames("Item", "Chance", "LootMode", "GroupId", "MinCount", "MaxCount");
+                        m_itemDroppedByBuilder.SetFieldsNames("Item", "Reference", "Chance", "LootMode", "GroupId", "MinCount", "MaxCount", "comment");
                     }
                     break;
                     default: // 8.x and 7.x
@@ -266,7 +266,7 @@ namespace WowHeadParser.Entities
                     }
                     break;
                 }
-            
+
 
                 foreach (ItemDroppedByTemplateParsing itemDroppedByData in m_itemDroppedByDatas)
                 {
