@@ -133,8 +133,6 @@ namespace WowHeadParser.Entities
 
                 String itemLootTemplateJSon = Tools.ExtractJsonFromWithPattern(itemHtml, itemLootTemplatePattern, 0);
 
-                Debug.WriteLine(itemLootTemplateJSon);
-
                 if (itemLootTemplateJSon != null)
                 {
                     m_itemLootTemplateDatas = JsonConvert.DeserializeObject<ItemLootTemplateParsing[]>(itemLootTemplateJSon);
