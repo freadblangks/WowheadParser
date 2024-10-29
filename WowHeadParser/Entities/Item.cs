@@ -5,6 +5,8 @@ using Newtonsoft.Json;
 using Sql;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace WowHeadParser.Entities
 {
@@ -62,6 +64,7 @@ namespace WowHeadParser.Entities
             return GetWowheadBaseUrl() + "/item=" + m_data.id + "&bonus=524";
         }
 
+
         public override bool ParseSingleJson(int id = 0)
         {
             if (m_data.id == 0 && id == 0)
@@ -69,58 +72,69 @@ namespace WowHeadParser.Entities
             else if (m_data.id == 0 && id != 0)
                 m_data.id = id;
 
+
             bool optionSelected = false;
             String itemHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             String dataPattern = @"\$\.extend\(g_items\[" + m_data.id + @"\], (.+)\);";
-
             String itemDataJSon = Tools.ExtractJsonFromWithPattern(itemHtml, dataPattern);
+
+
             if (itemDataJSon != null)
             {
                 m_data = JsonConvert.DeserializeObject<ItemParsing>(itemDataJSon);
+
+                optionSelected = true;
             }
 
             if (IsCheckboxChecked("locale"))
                 optionSelected = true;
 
-            /* We currently don't use an item's quality for anything
-            String qualityPattern = @"_\[" + m_data.id + @"\]" + "={\"name_frfr\":\"(?:.+?)\",\"quality\":([0-9])";
-
-            String itemQuality = Tools.ExtractJsonFromWithPattern(itemHtml, qualityPattern);
-            if (itemQuality != null)
-            {
-                Int32.TryParse(itemQuality, out m_data.quality);
-            }
-            */
-
             if (IsCheckboxChecked("create item"))
             {
-                String itemSpellPattern = @"new Listview\(\{\n* *template: 'spell',\n* *id: 'reagent-for',\n* *name: WH.TERMS.reagentfor,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *data: (.+),\n\}\);";
 
+                String itemSpellPattern = @"new Listview\(\{\n* *template: 'spell',\n* *id: 'created-by-spell',\n* *name: WH.TERMS.createdby,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *extraCols: \['popularity'\],\n* *sort: \['popularity'\],.*(?:\n)?.*data: (.+),\n\}\);";
                 String itemSpellJSon = Tools.ExtractJsonFromWithPattern(itemHtml, itemSpellPattern);
+
+
                 if (itemSpellJSon != null)
                 {
                     m_itemSpellDatas = JsonConvert.DeserializeObject<ItemSpellParsing[]>(itemSpellJSon);
                     optionSelected = true;
                 }
 
-                String itemCreatePattern = @"new Listview\(\{\n* *template: 'item',\n* *id: 'creates',\n* *name: WH.TERMS.creates,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *sort:\['name'\],.*(?:\n)?.*data: (.+),\n\}\);";
-
+                String itemCreatePattern = @"new Listview\(\{\n* *template: 'item',\n* *id: 'see-also',\n* *name: WH.TERMS.seealso_stc,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',.*(?:\n)?.*data: (.+),\n\}\);";
                 String itemCreateJSon = Tools.ExtractJsonFromWithPattern(itemHtml, itemCreatePattern);
+
+
                 if (itemCreateJSon != null)
                 {
                     m_itemCreateItemDatas = JsonConvert.DeserializeObject<ItemCreateItemParsing[]>(itemCreateJSon);
                     optionSelected = true;
+
                 }
             }
 
             if (IsCheckboxChecked("loot"))
             {
-                String itemLootTemplatePattern = @"new Listview\(\{\n* *template: 'item',\n* *id: 'contains',\n* *name: WH.TERMS.contains,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *extraCols: \[Listview.extraCols.count, Listview.extraCols.percent\],\n* *sort:\['noteworthy', '-percent', 'name'\],\n* *computeDataFunc: Listview.funcBox.initLootTable,\n* *note: WH.sprintf\(WH.TERMS.itemopened_format, [0-9]+\),\n* *_totalCount: ([0-9]+),\n* *data: (.+),\n\}\);";
+                String itemLootTemplatePattern = @"new Listview\(\{\n* *template: 'item',\n* *id: 'contained-in-item',\n* *name: WH.TERMS.containedin,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *extraCols: \['count', 'percent', 'popularity'\],\n* *sort: \['-percent', 'name'\],\n* *computeDataFunc: Listview\.funcBox\.initLootTable,\n* *onAfterCreate: Listview\.funcBox\.addModesAndSeasonsPhases,\n* *hasMultipleSeasonsPhases: false,\n* *seasonPhaseData: \{.*?\},\n* *data: (.+),\n\}\);";
 
                 String lootMaxCountStr = Tools.ExtractJsonFromWithPattern(itemHtml, itemLootTemplatePattern, 0);
-                m_lootMaxCount = lootMaxCountStr != null ? Int32.Parse(lootMaxCountStr) : 0;
-                String itemLootTemplateJSon = Tools.ExtractJsonFromWithPattern(itemHtml, itemLootTemplatePattern, 1);
+
+                int lootMaxCount = 0;
+                if (!string.IsNullOrWhiteSpace(lootMaxCountStr) && Int32.TryParse(lootMaxCountStr, out lootMaxCount))
+                {
+                    m_lootMaxCount = lootMaxCount;
+                }
+                else
+                {
+                    m_lootMaxCount = 0;
+                }
+
+                String itemLootTemplateJSon = Tools.ExtractJsonFromWithPattern(itemHtml, itemLootTemplatePattern, 0);
+
+                Debug.WriteLine(itemLootTemplateJSon);
+
                 if (itemLootTemplateJSon != null)
                 {
                     m_itemLootTemplateDatas = JsonConvert.DeserializeObject<ItemLootTemplateParsing[]>(itemLootTemplateJSon);
@@ -128,19 +142,20 @@ namespace WowHeadParser.Entities
                 }
             }
 
+
             if (IsCheckboxChecked("dropped by"))
             {
-                String itemDroppedByPattern = @"new Listview\(\{\n* *template: 'npc',\n* *id: 'dropped-by',\n* *name: WH.TERMS.droppedby,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *hiddenCols: \['type'\],\n* *extraCols: \[Listview.extraCols.count, Listview.extraCols.percent, Listview.extraCols.popularity\],\n* *sort: \['-percent', '-count', 'name'\],\n* *computeDataFunc: Listview.funcBox.initLootTable,\n* *data: (.+),\n\}\);";
+                String itemDroppedByPattern = @"new Listview\(\{\n* *template: 'npc',\n* *id: 'dropped-by',\n* *name: WH.TERMS.droppedby,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *hiddenCols: \['type'\],\n* *extraCols: \[Listview\.extraCols\.count, Listview\.extraCols\.percent, Listview\.extraCols\.popularity\],\n* *sort: \['-percent', '-count', 'name'\],\n* *computeDataFunc: Listview\.funcBox\.initLootTable,\n* *onAfterCreate: Listview\.funcBox\.addModesAndSeasonsPhases,\n* *hasMultipleSeasonsPhases: false,\n* *seasonPhaseData: \{.*?\},\n* *data: (.+),\n\}\);";
 
                 String itemDroppedByJson = Tools.ExtractJsonFromWithPattern(itemHtml, itemDroppedByPattern);
+
+
                 if (itemDroppedByJson != null)
                 {
                     m_itemDroppedByDatas = JsonConvert.DeserializeObject<ItemDroppedByTemplateParsing[]>(itemDroppedByJson);
                     optionSelected = true;
                 }
             }
-
-            String itemTeachesPattern = @"new Listview\(\{\n* *template: 'npc',\n* *id: 'dropped-by',\n* *name: WH.TERMS.droppedby,\n* *tabs: 'tabsRelated',\n* *parent: 'lkljbjkb574',\n* *hiddenCols: \['type'\],\n* *extraCols: \[Listview.extraCols.count, Listview.extraCols.percent, Listview.extraCols.popularity\],\n* *sort: \['-percent', '-count', 'name'\],\n* *computeDataFunc: Listview.funcBox.initLootTable,\n* *data: (.+),\n\}\);";
 
 
             if (optionSelected)
@@ -168,32 +183,32 @@ namespace WowHeadParser.Entities
 
                     switch (localeIndex)
                     {
-                        case 1:  locale = "koKR"; break;
-                        case 2:  locale = "frFR"; break;
-                        case 3:  locale = "deDE"; break;
-                        case 4:  locale = "zhCN"; break;
-                        case 5:  locale = "zhTW"; break;
-                        case 6:  locale = "esES"; break;
-                        case 7:  locale = "esMX"; break;
-                        case 8:  locale = "ruRU"; break;
-                        case 9:  locale = "ptPT"; break;
+                        case 1: locale = "koKR"; break;
+                        case 2: locale = "frFR"; break;
+                        case 3: locale = "deDE"; break;
+                        case 4: locale = "zhCN"; break;
+                        case 5: locale = "zhTW"; break;
+                        case 6: locale = "esES"; break;
+                        case 7: locale = "esMX"; break;
+                        case 8: locale = "ruRU"; break;
+                        case 9: locale = "ptPT"; break;
                         case 10: locale = "itIT"; break;
                     }
 
                     switch (GetVersion())
                     {
                         case "9.2.0.42560":
-                        {
-                            m_itemLocalesBuilder.SetFieldsNames("locale", "Description_lang", "Display3_lang", "Display2_lang", "Display1_lang", "Display_lang");
-                            m_itemLocalesBuilder.AppendFieldsValue(m_data.id, locale, "", "", "", "", m_data.name.Substring(1) ?? "");
-                        }
-                        break;
+                            {
+                                m_itemLocalesBuilder.SetFieldsNames("locale", "Description_lang", "Display3_lang", "Display2_lang", "Display1_lang", "Display_lang");
+                                m_itemLocalesBuilder.AppendFieldsValue(m_data.id, locale, "", "", "", "", m_data.name.Substring(1) ?? "");
+                            }
+                            break;
                         default: // 8.x and 7.x
-                        {
-                            m_itemLocalesBuilder.SetFieldsNames("Name_" + locale);
-                            m_itemLocalesBuilder.AppendFieldsValue(m_data.id, m_data.name.Substring(1) ?? "");
-                        }
-                        break;
+                            {
+                                m_itemLocalesBuilder.SetFieldsNames("Name_" + locale);
+                                m_itemLocalesBuilder.AppendFieldsValue(m_data.id, m_data.name.Substring(1) ?? "");
+                            }
+                            break;
                     }
 
                     returnSql += m_itemLocalesBuilder.ToString() + "\n";
@@ -207,7 +222,9 @@ namespace WowHeadParser.Entities
                 m_spellLootTemplateBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
 
                 foreach (ItemCreateItemParsing itemLootData in m_itemCreateItemDatas)
+
                     if (m_itemSpellDatas != null && m_itemSpellDatas.Length > 0)
+                    {
                         m_spellLootTemplateBuilder.AppendFieldsValue(m_itemSpellDatas[0].id, // Entry
                                                                      itemLootData.id, // Item
                                                                      0, // ReferenceitemLootData
@@ -218,8 +235,11 @@ namespace WowHeadParser.Entities
                                                                      "1", // MinCount
                                                                      "1", // MaxCount
                                                                      ""); // Comment
+                    }
+
 
                 returnSql += m_spellLootTemplateBuilder.ToString() + "\n";
+
             }
 
             if (IsCheckboxChecked("loot") && m_itemLootTemplateDatas != null)
@@ -231,8 +251,8 @@ namespace WowHeadParser.Entities
                 {
                     String percent = Tools.NormalizeFloat((float)itemLootData.count / (float)m_lootMaxCount * 100, m_itemLootTemplateDatas.Length);
 
-                    int minLootCount = itemLootData.stack.Length >= 1 ? itemLootData.stack[0] : 1;
-                    int maxLootCount = itemLootData.stack.Length >= 2 ? itemLootData.stack[1] : minLootCount;
+                    int minLootCount = itemLootData.stack != null && itemLootData.stack.Length >= 1 ? itemLootData.stack[0] : 1;
+                    int maxLootCount = itemLootData.stack != null && itemLootData.stack.Length >= 2 ? itemLootData.stack[1] : minLootCount;
 
                     m_itemLootTemplateBuilder.AppendFieldsValue(m_data.id, // Entry
                                                                 itemLootData.id, // Item
@@ -256,15 +276,15 @@ namespace WowHeadParser.Entities
                 switch (GetVersion())
                 {
                     case "9.2.0.42560":
-                    {
-                        m_itemDroppedByBuilder.SetFieldsNames("Item", "Reference", "Chance", "LootMode", "GroupId", "MinCount", "MaxCount", "comment");
-                    }
-                    break;
+                        {
+                            m_itemDroppedByBuilder.SetFieldsNames("Item", "Reference", "Chance", "LootMode", "GroupId", "MinCount", "MaxCount", "comment");
+                        }
+                        break;
                     default: // 8.x and 7.x
-                    {
-                        m_itemDroppedByBuilder.SetFieldsNames("item", "ChanceOrQuestChance", "lootmode", "groupid", "mincountOrRef", "maxcount", "itemBonuses");
-                    }
-                    break;
+                        {
+                            m_itemDroppedByBuilder.SetFieldsNames("item", "ChanceOrQuestChance", "lootmode", "groupid", "mincountOrRef", "maxcount", "itemBonuses");
+                        }
+                        break;
                 }
 
 
@@ -276,15 +296,15 @@ namespace WowHeadParser.Entities
                     switch (GetVersion())
                     {
                         case "9.2.0.42560":
-                        {
-                            m_itemDroppedByBuilder.AppendFieldsValue(itemDroppedByData.id, m_data.id, percentStr, 1, 0, "1", "1");
-                        }
-                        break;
+                            {
+                                m_itemDroppedByBuilder.AppendFieldsValue(itemDroppedByData.id, m_data.id, percentStr, 1, 0, "1", "1");
+                            }
+                            break;
                         default: // 8.x and 7.x
-                        {
-                            m_itemDroppedByBuilder.AppendFieldsValue(itemDroppedByData.id, m_data.id, percentStr, 1, 0, "1", "1", "");
-                        }
-                        break;
+                            {
+                                m_itemDroppedByBuilder.AppendFieldsValue(itemDroppedByData.id, m_data.id, percentStr, 1, 0, "1", "1", "");
+                            }
+                            break;
                     }
                 }
 

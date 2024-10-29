@@ -307,7 +307,7 @@ namespace WowHeadParser
                     leftDataGroup.Text = "Data";
                     leftListView.Items.Add("create item");
                     leftListView.Items.Add("dropped by");
-                    leftListView.Items.Add("locale");
+                    //leftListView.Items.Add("locale");
                     leftListView.Items.Add("loot");
                     break;
                 }
@@ -416,6 +416,11 @@ namespace WowHeadParser
         private void textBoxTo_TextChanged(object sender, EventArgs e)
         {
             CheckParsable();
+        }
+
+        private void leftDataGroup_Enter(object sender, EventArgs e)
+        {
+
         }
     }
 }

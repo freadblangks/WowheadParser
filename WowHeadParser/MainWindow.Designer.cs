@@ -165,6 +165,7 @@
             this.leftDataGroup.TabIndex = 13;
             this.leftDataGroup.TabStop = false;
             this.leftDataGroup.Text = "leftDataGroup";
+            this.leftDataGroup.Enter += new System.EventHandler(this.leftDataGroup_Enter);
             // 
             // leftListView
             // 
