@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Sql;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using WowHeadParser.Models;
 using static WowHeadParser.MainWindow;
@@ -60,7 +61,7 @@ namespace WowHeadParser.Entities
 
         public override List<Entity> GetIdsFromZone(String zoneId, String zoneHtml)
         {
-            String pattern = @"new Listview\(\{template: 'object', id: 'objects', name: WH.TERMS.objects, tabs: tabsRelated, parent: 'lkljbjkb574',(.*)data: (.+)\}\);";
+            String pattern = @"new Listview\(\{\s*template: 'object',\s*id: 'same-model-as',\s*name: WH\.TERMS\.samemodelas_stc,\s*tabs: tabsRelated,\s*parent: 'lkljbjkb574',\s*data:\s*(\[[\s\S]+?\])\s*\}\);";
             String gameobjectJSon = Tools.ExtractJsonFromWithPattern(zoneHtml, pattern, 1);
 
             List<Entity> tempArray = new List<Entity>();
@@ -89,8 +90,9 @@ namespace WowHeadParser.Entities
             String gameobjectHtml = Tools.GetHtmlFromWowhead(GetWowheadUrl(), webClient, CacheManager);
 
             String gameobjectDataPattern = @"\$\.extend\(g_objects\[" + m_data.id + @"\], (.+)\);";
-
             String gameobjectDataJSon = Tools.ExtractJsonFromWithPattern(gameobjectHtml, gameobjectDataPattern);
+            Debug.WriteLine(gameobjectDataJSon);
+
             if (gameobjectDataJSon != null)
             {
                 m_data = JsonConvert.DeserializeObject<GameObjectParsing>(gameobjectDataJSon);
@@ -101,11 +103,12 @@ namespace WowHeadParser.Entities
 
             if (IsCheckboxChecked("loot"))
             {
-                String gameobjectLootPattern = @"new Listview\(\{template: 'item', id: 'contains', name: WH.TERMS.contains,.*data:(.+)}\);";
-                String gameobjectLootCurrencyPattern = @"new Listview\({template: 'currency', id: 'contains-currency', name: WH.TERMS.currencies,.*data:(.+)}\);";
-
+                String gameobjectLootPattern = @"new Listview\(\{\s*template: 'item',\s*id: 'contains',\s*name: WH\.TERMS\.contains,.*?data:\s*(\[[\s\S]+?\])\s*\}\);";
                 String gameobjectLootItemJSon = Tools.ExtractJsonFromWithPattern(gameobjectHtml, gameobjectLootPattern);
+
+                String gameobjectLootCurrencyPattern = @"new Listview\({template: 'currency', id: 'contains-currency', name: WH.TERMS.currencies,.*data:(.+)}\);";
                 String gameobjectLootCurrencyJSon = Tools.ExtractJsonFromWithPattern(gameobjectHtml, gameobjectLootCurrencyPattern);
+
                 if (gameobjectLootItemJSon != null || gameobjectLootCurrencyJSon != null)
                 {
                     ObjectContains[] gameobjectLootItemDatas = gameobjectLootItemJSon != null ? JsonConvert.DeserializeObject<ObjectContains[]>(gameobjectLootItemJSon, Converter.SettingsDropConverter) : new ObjectContains[0];
