@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Sql;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
@@ -39,9 +40,8 @@ namespace WowHeadParser.Entities
             m_builderEnder = new SqlBuilder("creature_questender", "id");
             m_builderEnder.SetFieldsNames("quest");
 
-            m_builderSerieWithPrevious = new SqlBuilder("quest_template_addon", "id");
+            m_builderSerieWithPrevious = new SqlBuilder("quest_template_addon", "id", SqlQueryType.DeleteInsert);
             m_builderSerieWithPrevious.SetFieldsNames("PrevQuestID", "NextQuestID", "ExclusiveGroup", "RequiredMinRepFaction", "RequiredMaxRepFaction", "RequiredMinRepValue", "RequiredMaxRepValue", "ProvidedItemCount");
-
 
             m_builderRequiredTeam = new SqlBuilder("quest_template", "id", SqlQueryType.Update);
 
@@ -60,24 +60,25 @@ namespace WowHeadParser.Entities
             return GetWowheadBaseUrl() + "/quest=" + m_data.id;
         }
 
-        public override List<Entity> GetIdsFromZone(String zoneId, String zoneHtml)
-        {
-            String pattern = @"new Listview\(\{template: 'quest', id: 'quests', name: WH.TERMS.quests, tabs: tabsRelated, parent: 'lkljbjkb574',(.*)data: (.+)\}\);";
-            String creatureJSon = Tools.ExtractJsonFromWithPattern(zoneHtml, pattern, 1);
+        /* This method no longer exists */
+        //public override List<Entity> GetIdsFromZone(String zoneId, String zoneHtml)
+        //{
+        //    String pattern = @"new Listview\(\{template: 'quest', id: 'quests', name: WH.TERMS.quests, tabs: tabsRelated, parent: 'lkljbjkb574',(.*)data: (.+)\}\);";
+        //    String creatureJSon = Tools.ExtractJsonFromWithPattern(zoneHtml, pattern, 1);
 
-            List<Entity> tempArray = new List<Entity>();
-            if (creatureJSon != null)
-            {
-                List<CreatureTemplateParsing> parsingArray = JsonConvert.DeserializeObject<List<CreatureTemplateParsing>>(creatureJSon);
-                foreach (CreatureTemplateParsing creatureTemplateStruct in parsingArray)
-                {
-                    Quest questTemplate = new Quest(creatureTemplateStruct.id);
-                    tempArray.Add(questTemplate);
-                }
-            }
+        //    List<Entity> tempArray = new List<Entity>();
+        //    if (creatureJSon != null)
+        //    {
+        //        List<CreatureTemplateParsing> parsingArray = JsonConvert.DeserializeObject<List<CreatureTemplateParsing>>(creatureJSon);
+        //        foreach (CreatureTemplateParsing creatureTemplateStruct in parsingArray)
+        //        {
+        //            Quest questTemplate = new Quest(creatureTemplateStruct.id);
+        //            tempArray.Add(questTemplate);
+        //        }
+        //    }
 
-            return tempArray;
-        }
+        //    return tempArray;
+        //}
 
         public void PopulateSite()
         {
@@ -105,8 +106,11 @@ namespace WowHeadParser.Entities
             if (IsCheckboxChecked("starter/ender"))
             {
                 String dataPattern = @"var myMapper = new Mapper\((.+)\)";
+               
 
                 String questDataJSon = Tools.ExtractJsonFromWithPattern(Site, dataPattern);
+             
+
                 if (questDataJSon != null)
                 {
                     dynamic data = JsonConvert.DeserializeObject<dynamic>(questDataJSon);
@@ -353,6 +357,8 @@ namespace WowHeadParser.Entities
                         lock(parsedQuests)
                             parsedQuests.Add(questId);
                         m_builderSerieWithPrevious.AppendFieldsValue(questId, previousQuest, nextQuest, exclusiveGroup, RequiredMinRepFaction, RequiredMaxRepFaction, RequiredMinRepValue, RequiredMaxRepValue, ProvidedItemCount);
+                        m_builderRequiredTeam.AppendFieldsValue(questId);
+
                     }
                 }
             }
