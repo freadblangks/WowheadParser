@@ -4,6 +4,7 @@
 using Newtonsoft.Json;
 using Sql;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using WowHeadParser.Models;
 
@@ -51,10 +52,12 @@ namespace WowHeadParser.Entities
             if (string.IsNullOrEmpty(zoneHTML) || zoneHTML.Contains("It may have been removed from the game."))
                 return false;
 
+            String fishingPattern = @"new Listview\(\{\s*template: 'item',\s*id: 'drops',\s*name: [^,]*,\s*tabs: [^,]*,\s*parent: '[^']*',\s*extraCols: \[[^\]]*\],\s*computeDataFunc: [^,]*,\s*onAfterCreate: [^,]*,\s*data:\s*(\[[\s\S]+?\])\s*\}\);";
 
-            String fishingPattern = @"new Listview\({\n *template: 'item',\n *id: '[^']*',\n *name: [^,]*,\n *tabs: [^,]*,\n *parent: '[^']*',\n *extraCols: \[[^\]]*\],\n *sort:\[[^\]]*\],\n *computeDataFunc: [^,]*,\n *note: ""[^""]*"",\n *_totalCount: [0-9]*,\n *data:(.*)\}\);";
-            
             String fishingJSon = Tools.ExtractJsonFromWithPattern(zoneHTML, fishingPattern);
+            Debug.WriteLine(fishingJSon);
+
+
             if (fishingJSon != null)
             {
                 m_fishingDatas = JsonConvert.DeserializeObject<ZoneFishingLoot[]>(fishingJSon);

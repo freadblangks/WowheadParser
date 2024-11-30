@@ -33,6 +33,4 @@ namespace WowHeadParser.Models
         public int[] bonuses { get; set; }
         public int armor { get; set; }
     }
-    
-
 }

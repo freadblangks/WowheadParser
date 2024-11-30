@@ -18,7 +18,7 @@ namespace WowHeadParser
         const int MAX_WORKER = 20;
         Queue<string> _sqlQ = new Queue<string>();
         bool _done = false;
-        
+
         public Range(MainWindow view, String fileName, String optionName)
         {
             m_view = view;
@@ -27,7 +27,7 @@ namespace WowHeadParser
             m_getRangeListBackgroundWorker = new BackgroundWorker[MAX_WORKER];
             m_webClients = new HttpClient[MAX_WORKER];
             m_client = new WowClient[MAX_WORKER];
-            m_cacheManagers = new ICacheManager[MAX_WORKER];    
+            m_cacheManagers = new ICacheManager[MAX_WORKER];
             m_fileName = fileName;
             m_optionName = optionName;
             m_lastEstimateTime = 0;
@@ -40,7 +40,6 @@ namespace WowHeadParser
                 System.Windows.Forms.MessageBox.Show("End ID of Range should be higher than start.", "Error!");
                 return false;
             }
-            
 
             m_timestamp = Tools.GetUnixTimestamp();
 
@@ -96,7 +95,7 @@ namespace WowHeadParser
             {
                 m_webClients[i] = Tools.InitHttpClient();
                 m_client[i] = new WowClient();
-                m_cacheManagers[i] = new FileCacheManager(); 
+                m_cacheManagers[i] = new FileCacheManager();
                 m_getRangeListBackgroundWorker[i] = new BackgroundWorker();
                 m_getRangeListBackgroundWorker[i].DoWork += new DoWorkEventHandler(BackgroundWorkerProcessEntitiesList);
                 m_getRangeListBackgroundWorker[i].RunWorkerCompleted += new RunWorkerCompletedEventHandler(BackgroundWorkerProcessEntitiesCompleted);
@@ -120,7 +119,7 @@ namespace WowHeadParser
                 if (entity.ParseSingleJson())
                 {
                     String requestText = "\n\n" + entity.GetSQLRequest();
-                    
+
                     lock (_sqlQ)
                         _sqlQ.Enqueue(requestText);
                 }
@@ -140,7 +139,7 @@ namespace WowHeadParser
             if (m_parsedEntitiesCount > m_entityTodoCount)
                 return;
 
-            
+
 
             if (m_view != null)
             {
@@ -182,7 +181,7 @@ namespace WowHeadParser
             if (totalTime < 1)
                 totalTime = 1;
             float percent = estimatedSecondsLeft / totalTime * 100;
-            
+
             // percent: actually percent unfinished from 100
             // So percent = 75 would mean we're 25% done
             m_view.setProgressBar(100 - (int)percent);

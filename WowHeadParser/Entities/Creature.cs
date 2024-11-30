@@ -109,7 +109,7 @@ namespace WowHeadParser.Entities
         public float _5 { get; set; }
         public float _6 { get; set; }
     }
-    
+
 
     class CreatureLootCurrencyParsing : CreatureLootParsing
     {
@@ -215,7 +215,7 @@ namespace WowHeadParser.Entities
             String creatureHealthPattern = @"<div>(?:Health|Vie): ((?:\d|,|\.)+)</div>";
             String creatureMoneyPattern = @"\[money=([0-9]+)\]";
             String creatureModelIdPattern = @"WH\.Wow\.ModelViewer\.showLightbox\({&quot;type&quot;:[0-9]+,&quot;typeId&quot;:" + m_creatureTemplateData.id + @",&quot;displayId&quot;:([0-9]+)}\)";
-            
+
             String creatureTemplateDataJSon = Tools.ExtractJsonFromWithPattern(creatureHtml, dataPattern);
             if (creatureTemplateDataJSon != null)
             {
@@ -498,8 +498,8 @@ namespace WowHeadParser.Entities
                         break;
                     case "8.0.1.28153":
                         {
-                            m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
-                            m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "rank", "type", "family");
+                            m_creatureTemplateBuilder = new SqlBuilder("creature_template_difficulty", "entry");
+                            m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel");
 
                             m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
                             returnSql += m_creatureTemplateBuilder.ToString() + "\n";
@@ -514,18 +514,14 @@ namespace WowHeadParser.Entities
                         break;
                     default: // 9.2.0.42560
                         {
-                            m_creatureTemplateBuilder = new SqlBuilder("creature_template", "entry");
-                            m_creatureTemplateBuilder.SetFieldsNames("minlevel", "maxlevel", "name", "subname", "rank", "type", "family");
+                            m_creatureTemplateBuilder = new SqlBuilder("creature_template_difficulty", "entry", SqlQueryType.Update);
+                            m_creatureTemplateBuilder.SetFieldsNames("LevelScalingDeltaMin", "LevelScalingDeltaMax");
 
-                            m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel, m_creatureTemplateData.name, m_subname ?? "", m_isBoss ? "3" : "0", m_creatureTemplateData.type, m_creatureTemplateData.family);
-                            returnSql += m_creatureTemplateBuilder.ToString() + "\n";
+                            m_creatureTemplateBuilder.AppendFieldsValue(m_creatureTemplateData.id, m_creatureTemplateData.minlevel, m_creatureTemplateData.maxlevel);
+                            returnSql += "UPDATE creature_template_difficulty SET LevelScalingDeltaMin = " + m_creatureTemplateData.minlevel + ", LevelScalingDeltaMax = " + m_creatureTemplateData.maxlevel + " WHERE entry = " + m_creatureTemplateData.id + ";\n";
 
-                            // models are now saved in creature_template_model as of BFA
-                            m_creatureTemplateModelBuilder = new SqlBuilder("creature_template_model", "CreatureID");
-                            m_creatureTemplateModelBuilder.SetFieldsNames("Idx", "CreatureDisplayID", "Probability");
+                            // returnSql += m_creatureTemplateBuilder.ToString() + "\n";
 
-                            m_creatureTemplateModelBuilder.AppendFieldsValue(m_creatureTemplateData.id, "0", m_modelid, "1");
-                            returnSql += m_creatureTemplateModelBuilder.ToString() + "\n";
                         }
                         break;
                 }
@@ -635,12 +631,12 @@ namespace WowHeadParser.Entities
 
                 int templateEntry = m_creatureTemplateData.id;
                 m_creatureLootBuilder = new SqlBuilder("creature_loot_template", "entry", SqlQueryType.DeleteInsert);
-                m_creatureLootBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
+                m_creatureLootBuilder.SetFieldsNames("Item", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
 
                 m_creatureReferenceLootBuilder = new SqlBuilder("reference_loot_template", "entry", SqlQueryType.DeleteInsert);
                 m_creatureReferenceLootBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
 
-                returnSql += "UPDATE creature_template SET lootid = " + templateEntry + " WHERE entry = " + templateEntry + " AND lootid = 0;\n";
+                returnSql += "UPDATE creature_template_difficulty SET lootid = " + templateEntry + " WHERE entry = " + templateEntry + " AND lootid = 0;\n";
                 foreach (CreatureLootParsing creatureLootData in m_creatureLootDatas)
                 {
                     List<int> entryList = new List<int>();
@@ -692,7 +688,6 @@ namespace WowHeadParser.Entities
 
                             m_creatureLootBuilder.AppendFieldsValue(entry, // Entry
                                                                     creatureLootData.id * idMultiplier, // Item
-                                                                    0, // Reference
                                                                     chance, // Chance
                                                                     creatureLootData.questRequired, // QuestRequired
                                                                     lootMask, // LootMode
@@ -749,7 +744,7 @@ namespace WowHeadParser.Entities
                 m_creatureSkinningBuilder = new SqlBuilder("skinning_loot_template", "entry", SqlQueryType.DeleteInsert);
                 m_creatureSkinningBuilder.SetFieldsNames("Item", "Reference", "Chance", "QuestRequired", "LootMode", "GroupId", "MinCount", "MaxCount", "Comment");
 
-                returnSql += "UPDATE creature_template SET skinloot = " + m_creatureTemplateData.id + " WHERE entry = " + m_creatureTemplateData.id + " AND skinloot = 0;\n";
+                returnSql += "UPDATE creature_template_difficulty SET skinlootid = " + m_creatureTemplateData.id + " WHERE entry = " + m_creatureTemplateData.id + " AND skinlootid = 0;\n";
                 foreach (CreatureLootParsing creatureSkinningData in m_creatureSkinningDatas)
                 {
                     m_creatureSkinningBuilder.AppendFieldsValue(m_creatureTemplateData.id, // Entry
